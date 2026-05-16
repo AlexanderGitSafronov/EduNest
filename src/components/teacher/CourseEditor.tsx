@@ -18,14 +18,46 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
 import { StudentProgressTab } from "./StudentProgressTab"
+import { AnalyticsTab } from "./AnalyticsTab"
+import { FileUpload } from "@/components/ui/FileUpload"
 
-interface Lesson { id: string; title: string; type: string; published: boolean; videoUrl?: string }
+interface Lesson { id: string; title: string; type: string; published: boolean; videoUrl?: string; unlockAfterDays?: number | null }
 interface Module { id: string; title: string; lessons: Lesson[] }
 interface Enrollment { user: { id: string; name: string; email: string; image?: string } }
 interface Course {
   id: string; title: string; description?: string; thumbnail?: string; published: boolean; isPublic: boolean; deadline?: string
   modules: Module[]
   enrollments: Enrollment[]
+}
+
+function DripInput({ lessonId, value }: { lessonId: string; value: number | null }) {
+  const [days, setDays] = useState(value?.toString() ?? "")
+  const [saving, setSaving] = useState(false)
+
+  const save = async (val: string) => {
+    setSaving(true)
+    await fetch(`/api/lessons/${lessonId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unlockAfterDays: val === "" ? null : parseInt(val) }),
+    })
+    setSaving(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1" title="Розблокувати через N днів після запису">
+      <Input
+        type="number"
+        min={0}
+        placeholder="День"
+        value={days}
+        onChange={(e) => setDays(e.target.value)}
+        onBlur={() => save(days)}
+        className="h-7 w-16 text-xs px-2"
+      />
+      {saving && <span className="text-xs text-muted-foreground">...</span>}
+    </div>
+  )
 }
 
 export function CourseEditor({ course: initial }: { course: Course }) {
@@ -172,13 +204,14 @@ export function CourseEditor({ course: initial }: { course: Course }) {
       </div>
 
       <Tabs defaultValue="content">
-        <TabsList className="mb-6">
+        <TabsList className="mb-6 flex-wrap h-auto gap-1">
           <TabsTrigger value="content">Контент</TabsTrigger>
           <TabsTrigger value="settings">Налаштування</TabsTrigger>
           <TabsTrigger value="students">
             Студенти <Badge variant="secondary" className="ml-1.5">{course.enrollments.length}</Badge>
           </TabsTrigger>
           <TabsTrigger value="progress">Прогрес</TabsTrigger>
+          <TabsTrigger value="analytics">Аналітика</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
@@ -216,20 +249,26 @@ export function CourseEditor({ course: initial }: { course: Course }) {
                     ) : (
                       <div className="space-y-2 ml-7">
                         {mod.lessons.map((lesson) => (
-                          <div key={lesson.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className={`p-1.5 rounded-md ${lesson.type === "VIDEO" ? "bg-blue-500/10" : "bg-purple-500/10"}`}>
+                          <div key={lesson.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className={`p-1.5 rounded-md shrink-0 ${lesson.type === "VIDEO" ? "bg-blue-500/10" : "bg-purple-500/10"}`}>
                                 {lesson.type === "VIDEO" ? (
                                   <Video className="h-3.5 w-3.5 text-blue-500" />
                                 ) : (
                                   <FileText className="h-3.5 w-3.5 text-purple-500" />
                                 )}
                               </div>
-                              <span className="text-sm font-medium">{lesson.title}</span>
+                              <span className="text-sm font-medium truncate">{lesson.title}</span>
+                              {lesson.unlockAfterDays ? (
+                                <span className="text-xs text-orange-500 shrink-0">🔒 День {lesson.unlockAfterDays}</span>
+                              ) : null}
                             </div>
-                            <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
-                              <Link href={`/lessons/${lesson.id}`}>Переглянути</Link>
-                            </Button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <DripInput lessonId={lesson.id} value={lesson.unlockAfterDays ?? null} />
+                              <Button size="sm" variant="ghost" className="h-7 text-xs" asChild>
+                                <Link href={`/lessons/${lesson.id}`}>Переглянути</Link>
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -261,19 +300,13 @@ export function CourseEditor({ course: initial }: { course: Course }) {
                 <Label>{t.course.description}</Label>
                 <Textarea rows={4} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
-              <div className="space-y-2">
-                <Label>Обкладинка курсу (URL зображення)</Label>
-                <Input
-                  placeholder="https://example.com/image.jpg"
-                  value={form.thumbnail}
-                  onChange={(e) => setForm(f => ({ ...f, thumbnail: e.target.value }))}
-                />
-                {form.thumbnail && (
-                  <div className="relative h-32 rounded-xl overflow-hidden bg-muted">
-                    <img src={form.thumbnail} alt="thumbnail" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
-                  </div>
-                )}
-              </div>
+              <FileUpload
+                label="Обкладинка курсу"
+                accept="image"
+                value={form.thumbnail}
+                onChange={(url) => setForm(f => ({ ...f, thumbnail: url }))}
+                onClear={() => setForm(f => ({ ...f, thumbnail: "" }))}
+              />
               <div className="space-y-2">
                 <Label>Дедлайн курсу (необов'язково)</Label>
                 <Input
@@ -356,6 +389,10 @@ export function CourseEditor({ course: initial }: { course: Course }) {
         <TabsContent value="progress">
           <StudentProgressTab courseId={course.id} />
         </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsTab courseId={course.id} />
+        </TabsContent>
       </Tabs>
 
       {/* Add Module Dialog */}
@@ -401,8 +438,15 @@ export function CourseEditor({ course: initial }: { course: Course }) {
               <Input placeholder="Назва уроку..." value={lessonForm.title} onChange={e => setLessonForm(f => ({ ...f, title: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>URL відео (YouTube, Vimeo тощо)</Label>
-              <Input placeholder="https://..." value={lessonForm.videoUrl} onChange={e => setLessonForm(f => ({ ...f, videoUrl: e.target.value }))} />
+              <Label>URL відео (YouTube, Vimeo) або завантажте файл</Label>
+              <Input placeholder="https://youtube.com/..." value={lessonForm.videoUrl} onChange={e => setLessonForm(f => ({ ...f, videoUrl: e.target.value }))} />
+              <FileUpload
+                accept="video"
+                value={lessonForm.videoUrl.startsWith("https://res.cloudinary") ? lessonForm.videoUrl : ""}
+                onChange={(url) => setLessonForm(f => ({ ...f, videoUrl: url, type: "VIDEO" }))}
+                label=""
+                maxSizeMB={500}
+              />
             </div>
             <div className="space-y-2">
               <Label>Тип уроку</Label>

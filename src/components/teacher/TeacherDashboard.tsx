@@ -17,6 +17,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
 import Link from "next/link"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { TracksManager } from "./TracksManager"
 
 interface Course {
   id: string
@@ -172,9 +174,19 @@ export function TeacherDashboard() {
         })}
       </div>
 
-      {/* Courses */}
+      {/* Courses + Tracks tabs */}
+      <Tabs defaultValue="courses">
+        <TabsList className="mb-4">
+          <TabsTrigger value="courses">{t.dashboard.teacher.courses}</TabsTrigger>
+          <TabsTrigger value="tracks">Навчальні треки</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tracks">
+          <TracksManager />
+        </TabsContent>
+
+        <TabsContent value="courses">
       <div>
-        <h2 className="text-xl font-semibold mb-4">{t.dashboard.teacher.courses}</h2>
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1,2,3].map(i => <Skeleton key={i} className="h-52 rounded-2xl" />)}
@@ -261,6 +273,8 @@ export function TeacherDashboard() {
           </div>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
 
       {/* Create Course Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

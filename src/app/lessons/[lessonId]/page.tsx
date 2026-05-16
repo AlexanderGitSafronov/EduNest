@@ -21,7 +21,12 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
               teacher: { select: { id: true, name: true } },
               modules: {
                 orderBy: { position: "asc" },
-                include: { lessons: { orderBy: { position: "asc" }, select: { id: true, title: true, duration: true, type: true } } },
+                include: {
+                  lessons: {
+                    orderBy: { position: "asc" },
+                    select: { id: true, title: true, duration: true, type: true, unlockAfterDays: true },
+                  },
+                },
               },
             },
           },
@@ -42,6 +47,18 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
       where: { userId_courseId: { userId: sessionUser.id!, courseId: course.id } },
     })
     if (!enrollment) redirect("/dashboard")
+
+    // Drip content: check if lesson is unlocked
+    if (lesson.unlockAfterDays && lesson.unlockAfterDays > 0) {
+      const daysSinceEnroll = Math.floor(
+        (Date.now() - new Date(enrollment.createdAt).getTime()) / 86400000
+      )
+      if (daysSinceEnroll < lesson.unlockAfterDays) {
+        const unlockDate = new Date(enrollment.createdAt)
+        unlockDate.setDate(unlockDate.getDate() + lesson.unlockAfterDays)
+        redirect(`/dashboard?locked=${encodeURIComponent(lesson.title)}&unlockDate=${unlockDate.toISOString().slice(0, 10)}`)
+      }
+    }
   } else if (sessionUser.role === "TEACHER" && course.teacher.id !== sessionUser.id) {
     redirect("/dashboard")
   }
