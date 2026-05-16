@@ -155,7 +155,9 @@ export function CourseEditor({ course: initial }: { course: Course }) {
       setLessonForm({ title: "", videoUrl: "", type: "TEXT" as const })
       toast.success("Урок додано!")
     } else {
-      toast.error("Помилка при додаванні уроку")
+      const err = await res.json().catch(() => ({}))
+      const msg = typeof err.error === "string" ? err.error : `Помилка ${res.status}`
+      toast.error(msg)
     }
   }
 
