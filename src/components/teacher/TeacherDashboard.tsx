@@ -106,8 +106,8 @@ export function TeacherDashboard() {
         body: JSON.stringify({ studentEmail }),
       })
       if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error)
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error ?? `Помилка ${res.status}`)
       }
     },
     onSuccess: () => {

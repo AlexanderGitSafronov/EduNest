@@ -19,9 +19,18 @@ function VideoPlayer({ url, onEnded }: { url: string; onEnded?: () => void }) {
   const isVimeo = url.includes("vimeo.com")
 
   if (isYouTube || isVimeo) {
+    let videoId = ""
+    if (isYouTube) {
+      try {
+        const u = new URL(url)
+        videoId = u.searchParams.get("v") ?? u.pathname.split("/").filter(Boolean).pop() ?? ""
+      } catch {
+        videoId = url.split("/").filter(Boolean).pop() ?? ""
+      }
+    }
     const src = isYouTube
-      ? `https://www.youtube.com/embed/${url.split("v=")[1]?.split("&")[0] ?? url.split("/").pop()}`
-      : `https://player.vimeo.com/video/${url.split("/").pop()}`
+      ? `https://www.youtube.com/embed/${videoId}`
+      : `https://player.vimeo.com/video/${url.split("/").filter(Boolean).pop() ?? ""}`
     return (
       <iframe
         src={src}
@@ -205,7 +214,7 @@ export function LessonViewer({ lesson, userId, role }: Props) {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="mt-6 prose-lesson"
-              dangerouslySetInnerHTML={{ __html: lesson.content }}
+              dangerouslySetInnerHTML={{ __html: lesson.content.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/on\w+="[^"]*"/g, "") }}
             />
           )}
 

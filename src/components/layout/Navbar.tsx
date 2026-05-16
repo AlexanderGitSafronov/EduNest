@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
+import { useQuery } from "@tanstack/react-query"
 import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,14 @@ export function Navbar() {
   const { theme, setTheme } = useTheme()
   const { locale, setLocale } = useLocaleStore()
   const currentLocale = locales.find((l) => l.code === locale)
+
+  const { data: notifData } = useQuery({
+    queryKey: ["notifications-count"],
+    queryFn: () => fetch("/api/notifications?unread=1").then(r => r.ok ? r.json() : []),
+    enabled: !!session,
+    refetchInterval: 60000,
+  })
+  const unreadCount: number = Array.isArray(notifData) ? notifData.filter((n: { read: boolean }) => !n.read).length : 0
 
   const themeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor
   const ThemeIcon = themeIcon
@@ -99,9 +108,11 @@ export function Navbar() {
                 <Button variant="ghost" size="icon" className="relative text-muted-foreground" asChild>
                   <Link href="/notifications">
                     <Bell className="h-4 w-4" />
-                    <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
-                      3
-                    </Badge>
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 text-[10px] flex items-center justify-center">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </Badge>
+                    )}
                   </Link>
                 </Button>
 
