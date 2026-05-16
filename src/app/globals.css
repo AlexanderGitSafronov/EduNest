@@ -101,6 +101,12 @@
   border-color: hsl(var(--border));
 }
 
+button, [role="button"], a, [role="menuitem"], [role="option"],
+label[for], select, [role="tab"], [role="checkbox"], [role="switch"],
+[role="combobox"], summary {
+  cursor: pointer;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));

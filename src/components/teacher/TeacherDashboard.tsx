@@ -69,6 +69,7 @@ export function TeacherDashboard() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [form, setForm] = useState({ title: "", description: "" })
   const [studentEmail, setStudentEmail] = useState("")
+  const [deleteCourseId, setDeleteCourseId] = useState<string | null>(null)
 
   const { data: courses, isLoading } = useQuery({ queryKey: ["courses"], queryFn: fetchCourses })
 
@@ -222,9 +223,7 @@ export function TeacherDashboard() {
                             <UserPlus className="mr-2 h-4 w-4" /> {t.course.giveAccess}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={() => {
-                            if (confirm("Видалити курс?")) deleteMutation.mutate(course.id)
-                          }}>
+                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteCourseId(course.id)}>
                             <Trash2 className="mr-2 h-4 w-4" /> {t.course.delete}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -293,6 +292,21 @@ export function TeacherDashboard() {
             <Button variant="outline" onClick={() => setEnrollOpen(false)}>{t.common.cancel}</Button>
             <Button variant="gradient" onClick={() => enrollMutation.mutate()} disabled={!studentEmail || enrollMutation.isPending}>
               {enrollMutation.isPending ? "Додавання..." : t.course.giveAccess}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Delete Course Dialog */}
+      <Dialog open={!!deleteCourseId} onOpenChange={(o) => { if (!o) setDeleteCourseId(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Видалити курс?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">Курс та всі його модулі й уроки будуть видалені назавжди. Цю дію неможливо скасувати.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCourseId(null)}>{t.common.cancel}</Button>
+            <Button variant="destructive" onClick={() => { if (deleteCourseId) deleteMutation.mutate(deleteCourseId); setDeleteCourseId(null) }}
+              disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending ? "Видалення..." : "Видалити"}
             </Button>
           </DialogFooter>
         </DialogContent>

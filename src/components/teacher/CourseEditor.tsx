@@ -36,6 +36,9 @@ export function CourseEditor({ course: initial }: { course: Course }) {
   const [lessonForm, setLessonForm] = useState<{ title: string; videoUrl: string; type: "TEXT" | "VIDEO" | "MIXED" }>({ title: "", videoUrl: "", type: "TEXT" })
   const [expandedMods, setExpandedMods] = useState<Set<string>>(new Set(course.modules.map(m => m.id)))
   const [saving, setSaving] = useState(false)
+  const [addModuleOpen, setAddModuleOpen] = useState(false)
+  const [moduleTitle, setModuleTitle] = useState("")
+  const [deleteStudentId, setDeleteStudentId] = useState<string | null>(null)
 
   const saveCourse = async () => {
     setSaving(true)
@@ -67,16 +70,17 @@ export function CourseEditor({ course: initial }: { course: Course }) {
   }
 
   const addModule = async () => {
-    const title = prompt("Назва модуля:")
-    if (!title) return
+    if (!moduleTitle.trim()) return
     const res = await fetch("/api/modules", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, courseId: course.id }),
+      body: JSON.stringify({ title: moduleTitle.trim(), courseId: course.id }),
     })
     if (res.ok) {
       const mod = await res.json()
       setCourse(c => ({ ...c, modules: [...c.modules, { ...mod, lessons: [] }] }))
+      setModuleTitle("")
+      setAddModuleOpen(false)
     }
   }
 
@@ -158,7 +162,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">{t.course.modules}</h2>
-              <Button variant="outline" size="sm" onClick={addModule}>
+              <Button variant="outline" size="sm" onClick={() => setAddModuleOpen(true)}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t.course.addModule}
               </Button>
             </div>
@@ -216,7 +220,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <p className="text-muted-foreground mb-4">Немає модулів. Додайте перший модуль.</p>
-                  <Button variant="outline" onClick={addModule}><Plus className="mr-2 h-4 w-4" /> Додати модуль</Button>
+                  <Button variant="outline" onClick={() => setAddModuleOpen(true)}><Plus className="mr-2 h-4 w-4" /> Додати модуль</Button>
                 </CardContent>
               </Card>
             )}
@@ -264,7 +268,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
                         </div>
                       </div>
                       <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive h-8"
-                        onClick={() => { if (confirm("Видалити студента?")) removeStudent(enrollment.user.id) }}>
+                        onClick={() => setDeleteStudentId(enrollment.user.id)}>
                         <UserMinus className="h-4 w-4" />
                       </Button>
                     </div>
@@ -275,6 +279,39 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Add Module Dialog */}
+      <Dialog open={addModuleOpen} onOpenChange={(o) => { setAddModuleOpen(o); if (!o) setModuleTitle("") }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Новий модуль</DialogTitle></DialogHeader>
+          <div className="py-2">
+            <Label className="mb-2 block">Назва модуля</Label>
+            <Input
+              placeholder="Введіть назву..."
+              value={moduleTitle}
+              onChange={(e) => setModuleTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addModule()}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddModuleOpen(false)}>{t.common.cancel}</Button>
+            <Button variant="gradient" onClick={addModule} disabled={!moduleTitle.trim()}>Додати</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm Remove Student Dialog */}
+      <Dialog open={!!deleteStudentId} onOpenChange={(o) => { if (!o) setDeleteStudentId(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Видалити студента?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">Студент втратить доступ до курсу. Цю дію можна скасувати, додавши студента повторно.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteStudentId(null)}>{t.common.cancel}</Button>
+            <Button variant="destructive" onClick={() => { if (deleteStudentId) removeStudent(deleteStudentId); setDeleteStudentId(null) }}>Видалити</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Lesson Dialog */}
       <Dialog open={addLessonOpen} onOpenChange={setAddLessonOpen}>
