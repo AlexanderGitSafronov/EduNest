@@ -31,16 +31,29 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  courses       Course[]        @relation("TeacherCourses")
-  enrollments   Enrollment[]
-  progress      LessonProgress[]
-  notes         Note[]
-  notifications Notification[]
-  comments      Comment[]
+  accounts       Account[]
+  sessions       Session[]
+  courses        Course[]         @relation("TeacherCourses")
+  enrollments    Enrollment[]
+  progress       LessonProgress[]
+  notes          Note[]
+  notifications  Notification[]
+  comments       Comment[]
+  teacherRequest TeacherRequest?
 
   @@map("users")
+}
+
+model TeacherRequest {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("PENDING")
+  message   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teacher_requests")
 }
 
 model Account {
@@ -89,6 +102,7 @@ model Course {
   thumbnail   String?
   slug        String   @unique
   published   Boolean  @default(false)
+  isPublic    Boolean  @default(false)
   teacherId   String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

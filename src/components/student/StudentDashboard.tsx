@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { BookOpen, CheckCircle2, TrendingUp, Play, ArrowRight, RefreshCw, AlertCircle, Clapperboard, Loader2 } from "lucide-react"
+import { BookOpen, CheckCircle2, TrendingUp, Play, ArrowRight, RefreshCw, AlertCircle, Clapperboard, Loader2, Clock, XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useTranslation } from "@/hooks/useTranslation"
-import { useViewModeStore } from "@/lib/store"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -24,6 +23,12 @@ interface EnrolledCourse {
   teacher: { name: string; image?: string }
   modules: Array<{ lessons: Array<{ id: string }> }>
   _count: { modules: number }
+}
+
+interface TeacherRequest {
+  id: string
+  status: string
+  message: string | null
 }
 
 async function fetchEnrolledCourses(): Promise<EnrolledCourse[]> {
@@ -38,30 +43,91 @@ async function fetchProgress(): Promise<Array<{ lessonId: string; completed: boo
   return res.json()
 }
 
+async function fetchTeacherRequest(): Promise<TeacherRequest | null> {
+  const res = await fetch("/api/user/teacher-request", { cache: "no-store" })
+  if (!res.ok) return null
+  return res.json()
+}
+
 function BecomeTeacherCard() {
-  const { data: session, update } = useSession()
-  const { setViewMode } = useViewModeStore()
+  const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleBecomeTeacher = async () => {
+  const { data: request, refetch } = useQuery({
+    queryKey: ["teacher-request"],
+    queryFn: fetchTeacherRequest,
+    enabled: (session?.user as { role?: string })?.role === "STUDENT",
+  })
+
+  if ((session?.user as { role?: string })?.role !== "STUDENT") return null
+
+  const handleSubmit = async () => {
     setLoading(true)
     try {
       const res = await fetch("/api/user/become-teacher", { method: "POST" })
       if (!res.ok) throw new Error()
-
-      await update()
-      setViewMode("teacher")
+      await refetch()
       setOpen(false)
-      toast.success("Вітаємо! Тепер ви викладач. Створіть свій перший курс!")
+      toast.success("Заявку надіслано! Очікуйте підтвердження від адміністратора.")
     } catch {
-      toast.error("Не вдалося змінити роль. Спробуйте ще раз.")
+      toast.error("Не вдалося надіслати заявку. Спробуйте ще раз.")
     } finally {
       setLoading(false)
     }
   }
 
-  if ((session?.user as { role?: string })?.role === "TEACHER") return null
+  if (request?.status === "PENDING") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-10">
+        <Card className="border-orange-500/20 bg-orange-500/5">
+          <CardContent className="flex items-center gap-4 py-5 px-6">
+            <div className="p-3 rounded-xl bg-orange-500/10 shrink-0">
+              <Clock className="h-5 w-5 text-orange-500" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">Заявку на викладача надіслано</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Очікуйте підтвердження від адміністратора</p>
+            </div>
+            <Badge variant="secondary" className="ml-auto shrink-0">На розгляді</Badge>
+          </CardContent>
+        </Card>
+      </motion.div>
+    )
+  }
+
+  if (request?.status === "REJECTED") {
+    return (
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-10">
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4 py-5 px-6">
+            <div className="p-3 rounded-xl bg-destructive/10 shrink-0">
+              <XCircle className="h-5 w-5 text-destructive" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-sm">Заявку відхилено</p>
+              {request.message && <p className="text-xs text-muted-foreground mt-0.5">{request.message}</p>}
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setOpen(true)}>
+              Подати повторно
+            </Button>
+          </CardContent>
+        </Card>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader><DialogTitle>Подати заявку повторно?</DialogTitle></DialogHeader>
+            <p className="text-sm text-muted-foreground py-2">Нову заявку буде передано на розгляд адміністратору.</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpen(false)}>Скасувати</Button>
+              <Button variant="gradient" onClick={handleSubmit} disabled={loading}>
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Надсилання...</> : "Підтвердити"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+    )
+  }
 
   return (
     <>
@@ -94,7 +160,7 @@ function BecomeTeacherCard() {
           </DialogHeader>
           <div className="py-2 space-y-3">
             <p className="text-sm text-muted-foreground">
-              Після підтвердження ви отримаєте доступ до Studio — де можна створювати курси, модулі та уроки.
+              Ваша заявка буде надіслана адміністратору. Після підтвердження ви отримаєте доступ до Studio.
             </p>
             <ul className="text-sm space-y-1.5">
               {["Створюйте необмежену кількість курсів", "Керуйте студентами", "Переглядайте прогрес учнів"].map((item) => (
@@ -104,14 +170,11 @@ function BecomeTeacherCard() {
                 </li>
               ))}
             </ul>
-            <p className="text-xs text-muted-foreground border-t pt-3">
-              Ви завжди зможете переключитися назад до режиму студента через перемикач у навігаційній панелі.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Скасувати</Button>
-            <Button variant="gradient" onClick={handleBecomeTeacher} disabled={loading}>
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Оновлення...</> : "Підтвердити"}
+            <Button variant="gradient" onClick={handleSubmit} disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Надсилання...</> : "Надіслати заявку"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -160,7 +223,6 @@ export function StudentDashboard() {
         </p>
       </motion.div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, i) => {
           const Icon = stat.icon
@@ -184,7 +246,6 @@ export function StudentDashboard() {
         })}
       </div>
 
-      {/* Enrolled Courses */}
       <h2 className="text-xl font-semibold mb-4">{t.dashboard.student.enrolled}</h2>
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -206,7 +267,10 @@ export function StudentDashboard() {
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <BookOpen className="h-12 w-12 text-muted-foreground/50 mb-4" />
             <h3 className="font-semibold text-lg mb-2">{t.dashboard.student.noCoursesYet}</h3>
-            <p className="text-muted-foreground text-sm">Зверніться до вашого викладача для отримання доступу</p>
+            <p className="text-muted-foreground text-sm mb-4">Зверніться до вашого викладача або знайдіть курс у каталозі</p>
+            <Button variant="outline" asChild>
+              <Link href="/courses">Переглянути каталог курсів</Link>
+            </Button>
           </CardContent>
         </Card>
       ) : (

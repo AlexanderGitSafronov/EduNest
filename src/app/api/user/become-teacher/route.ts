@@ -14,12 +14,19 @@ export async function POST() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: "TEACHER" },
+    const existing = await prisma.teacherRequest.findUnique({ where: { userId } })
+
+    if (existing?.status === "PENDING") {
+      return NextResponse.json({ status: "PENDING" })
+    }
+
+    await prisma.teacherRequest.upsert({
+      where: { userId },
+      create: { userId },
+      update: { status: "PENDING", message: null },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ status: "PENDING" })
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }

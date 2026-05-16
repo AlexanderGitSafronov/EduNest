@@ -8,6 +8,7 @@ const updateSchema = z.object({
   description: z.string().optional(),
   thumbnail: z.string().optional(),
   published: z.boolean().optional(),
+  isPublic: z.boolean().optional(),
 })
 
 export async function GET(

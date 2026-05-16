@@ -22,7 +22,7 @@ interface Lesson { id: string; title: string; type: string; published: boolean; 
 interface Module { id: string; title: string; lessons: Lesson[] }
 interface Enrollment { user: { id: string; name: string; email: string; image?: string } }
 interface Course {
-  id: string; title: string; description?: string; thumbnail?: string; published: boolean
+  id: string; title: string; description?: string; thumbnail?: string; published: boolean; isPublic: boolean
   modules: Module[]
   enrollments: Enrollment[]
 }
@@ -30,7 +30,7 @@ interface Course {
 export function CourseEditor({ course: initial }: { course: Course }) {
   const { t } = useTranslation()
   const [course, setCourse] = useState(initial)
-  const [form, setForm] = useState({ title: course.title, description: course.description ?? "" })
+  const [form, setForm] = useState({ title: course.title, description: course.description ?? "", isPublic: course.isPublic })
   const [addLessonOpen, setAddLessonOpen] = useState(false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [lessonForm, setLessonForm] = useState<{ title: string; videoUrl: string; type: "TEXT" | "VIDEO" | "MIXED" }>({ title: "", videoUrl: "", type: "TEXT" })
@@ -46,7 +46,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
       const res = await fetch(`/api/courses/${course.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, description: form.description }),
+        body: JSON.stringify({ title: form.title, description: form.description, isPublic: form.isPublic }),
       })
       if (!res.ok) throw new Error()
       toast.success("Збережено!")
@@ -246,6 +246,33 @@ export function CourseEditor({ course: initial }: { course: Course }) {
               <div className="space-y-2">
                 <Label>{t.course.description}</Label>
                 <Textarea rows={4} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div className="rounded-xl border p-4 space-y-3">
+                <h3 className="text-sm font-semibold">Видимість курсу</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, isPublic: false }))}
+                    className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${!form.isPublic ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                  >
+                    <span className="text-xl mt-0.5">🔒</span>
+                    <div>
+                      <p className="text-sm font-medium">Приватний</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Тільки запрошені студенти мають доступ</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, isPublic: true }))}
+                    className={`flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all ${form.isPublic ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                  >
+                    <span className="text-xl mt-0.5">🌐</span>
+                    <div>
+                      <p className="text-sm font-medium">Публічний</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Відображається в каталозі, будь-хто може записатися</p>
+                    </div>
+                  </button>
+                </div>
               </div>
               <Button variant="gradient" onClick={saveCourse} disabled={saving}>
                 <Save className="mr-2 h-4 w-4" /> {saving ? "Збереження..." : t.common.save}

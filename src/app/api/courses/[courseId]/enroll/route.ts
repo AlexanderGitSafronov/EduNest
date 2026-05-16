@@ -9,11 +9,32 @@ export async function POST(
   const { courseId } = await params
   try {
     const session = await auth()
-    if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { studentEmail } = await req.json()
+    const body = await req.json()
+
+    // Self-enrollment for public courses
+    if (body.selfEnroll) {
+      const course = await prisma.course.findUnique({ where: { id: courseId } })
+      if (!course || !course.published || !course.isPublic) {
+        return NextResponse.json({ error: "Course not available" }, { status: 404 })
+      }
+      const userId = (session.user as { id?: string }).id!
+      const existing = await prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId, courseId } },
+      })
+      if (existing) return NextResponse.json({ error: "Already enrolled" }, { status: 409 })
+      const enrollment = await prisma.enrollment.create({ data: { userId, courseId } })
+      return NextResponse.json(enrollment, { status: 201 })
+    }
+
+    if ((session.user as { role?: string }).role !== "TEACHER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { studentEmail } = body
 
     const student = await prisma.user.findUnique({
       where: { email: studentEmail, role: "STUDENT" },
