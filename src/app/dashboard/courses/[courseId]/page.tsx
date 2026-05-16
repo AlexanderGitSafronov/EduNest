@@ -9,20 +9,25 @@ export default async function CourseEditorPage({ params }: { params: Promise<{ c
   const session = await auth()
   if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") redirect("/dashboard")
 
-  const course = await prisma.course.findUnique({
-    where: { id: courseId, teacherId: session.user.id },
-    include: {
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: { orderBy: { position: "asc" } },
+  let course
+  try {
+    course = await prisma.course.findUnique({
+      where: { id: courseId, teacherId: session.user.id },
+      include: {
+        modules: {
+          orderBy: { position: "asc" },
+          include: {
+            lessons: { orderBy: { position: "asc" } },
+          },
+        },
+        enrollments: {
+          include: { user: { select: { id: true, name: true, email: true, image: true } } },
         },
       },
-      enrollments: {
-        include: { user: { select: { id: true, name: true, email: true, image: true } } },
-      },
-    },
-  })
+    })
+  } catch {
+    course = null
+  }
 
   if (!course) notFound()
 
