@@ -46,14 +46,7 @@ export function Navbar() {
             <span className="text-xl font-bold gradient-text">EduNest</span>
           </Link>
 
-          {/* Desktop nav */}
-          {session && (
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                {t.nav.dashboard}
-              </Link>
-            </div>
-          )}
+          <div />
 
           {/* Actions */}
           <div className="flex items-center gap-2">
