@@ -8,9 +8,13 @@ export async function middleware(req: NextRequest) {
   const protectedPaths = ["/dashboard", "/lessons", "/profile", "/notifications"]
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
 
+  const secureCookie = process.env.NODE_ENV === "production"
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie,
+    cookieName: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
+    salt: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
   })
 
   if (isProtected && !token) {
