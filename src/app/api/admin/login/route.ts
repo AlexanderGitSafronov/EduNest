@@ -8,8 +8,8 @@ export async function POST(req: Request) {
     if (
       !process.env.ADMIN_LOGIN ||
       !process.env.ADMIN_PASSWORD ||
-      login !== process.env.ADMIN_LOGIN ||
-      password !== process.env.ADMIN_PASSWORD
+      login.trim() !== process.env.ADMIN_LOGIN.trim() ||
+      password.trim() !== process.env.ADMIN_PASSWORD.trim()
     ) {
       return NextResponse.json({ error: "Невірний логін або пароль" }, { status: 401 })
     }
