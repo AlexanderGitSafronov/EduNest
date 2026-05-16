@@ -41,12 +41,11 @@ export default function LoginPage() {
         redirect: false,
       })
 
-      if (result?.error) {
+      if (result?.error || !result?.ok) {
         toast.error(t.auth.loginError)
       } else {
         toast.success(t.auth.loginSuccess)
-        router.push("/dashboard")
-        router.refresh()
+        window.location.href = "/dashboard"
       }
     } finally {
       setLoading(false)

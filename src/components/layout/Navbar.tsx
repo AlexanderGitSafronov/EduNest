@@ -1,10 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X, GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown } from "lucide-react"
+import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -31,8 +29,6 @@ export function Navbar() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { locale, setLocale } = useLocaleStore()
-  const [mobileOpen, setMobileOpen] = useState(false)
-
   const currentLocale = locales.find((l) => l.code === locale)
 
   const themeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor
@@ -51,16 +47,13 @@ export function Navbar() {
           </Link>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              {t.nav.home}
-            </Link>
-            {session && (
+          {session && (
+            <div className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 {t.nav.dashboard}
               </Link>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2">
@@ -160,7 +153,7 @@ export function Navbar() {
                 </DropdownMenu>
               </>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/auth/login">{t.nav.login}</Link>
                 </Button>
@@ -169,63 +162,9 @@ export function Navbar() {
                 </Button>
               </div>
             )}
-
-            {/* Mobile menu toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
           </div>
         </div>
       </div>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t bg-background/95 backdrop-blur"
-          >
-            <div className="p-4 space-y-2">
-              <Link href="/" onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2 text-sm rounded-lg hover:bg-accent">
-                {t.nav.home}
-              </Link>
-              {session ? (
-                <>
-                  <Link href="/dashboard" onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-2 text-sm rounded-lg hover:bg-accent">
-                    {t.nav.dashboard}
-                  </Link>
-                  <button
-                    onClick={() => { signOut({ callbackUrl: "/" }); setMobileOpen(false) }}
-                    className="block w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent text-destructive"
-                  >
-                    {t.nav.logout}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link href="/auth/login" onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-2 text-sm rounded-lg hover:bg-accent">
-                    {t.nav.login}
-                  </Link>
-                  <Link href="/auth/register" onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-2 text-sm rounded-lg bg-primary text-primary-foreground">
-                    {t.nav.register}
-                  </Link>
-                </>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </nav>
   )
 }
