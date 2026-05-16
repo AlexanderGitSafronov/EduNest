@@ -10,11 +10,13 @@ const courseSchema = z.object({
   thumbnail: z.string().optional(),
 })
 
+const NO_CACHE = { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+
 export async function GET() {
   try {
     const session = await auth()
     if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401, ...NO_CACHE })
     }
 
     if ((session.user as { role?: string }).role === "TEACHER") {
@@ -28,7 +30,7 @@ export async function GET() {
         },
         orderBy: { createdAt: "desc" },
       })
-      return NextResponse.json(courses)
+      return NextResponse.json(courses, NO_CACHE)
     }
 
     const enrollments = await prisma.enrollment.findMany({
@@ -49,9 +51,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
 
-    return NextResponse.json(enrollments.map((e) => e.course))
+    return NextResponse.json(enrollments.map((e) => e.course), NO_CACHE)
   } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, ...NO_CACHE })
   }
 }
 

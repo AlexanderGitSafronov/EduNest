@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { BookOpen, CheckCircle2, Clock, TrendingUp, Play, ArrowRight } from "lucide-react"
+import { BookOpen, CheckCircle2, TrendingUp, Play, ArrowRight, RefreshCw, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -23,13 +23,13 @@ interface EnrolledCourse {
 }
 
 async function fetchEnrolledCourses(): Promise<EnrolledCourse[]> {
-  const res = await fetch("/api/courses")
-  if (!res.ok) throw new Error("Failed to fetch")
+  const res = await fetch("/api/courses", { cache: "no-store" })
+  if (!res.ok) throw new Error(`Failed to fetch courses (${res.status})`)
   return res.json()
 }
 
 async function fetchProgress(): Promise<Array<{ lessonId: string; completed: boolean }>> {
-  const res = await fetch("/api/progress")
+  const res = await fetch("/api/progress", { cache: "no-store" })
   if (!res.ok) return []
   return res.json()
 }
@@ -38,7 +38,7 @@ export function StudentDashboard() {
   const { data: session } = useSession()
   const { t } = useTranslation()
 
-  const { data: courses, isLoading } = useQuery({ queryKey: ["enrolled-courses"], queryFn: fetchEnrolledCourses })
+  const { data: courses, isLoading, isError, refetch } = useQuery({ queryKey: ["enrolled-courses"], queryFn: fetchEnrolledCourses })
   const { data: progress } = useQuery({ queryKey: ["progress"], queryFn: fetchProgress })
 
   const completedLessonIds = new Set(progress?.filter(p => p.completed).map(p => p.lessonId) ?? [])
@@ -104,6 +104,17 @@ export function StudentDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1,2,3].map(i => <Skeleton key={i} className="h-52 rounded-2xl" />)}
         </div>
+      ) : isError ? (
+        <Card className="border-destructive/20">
+          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive/50 mb-4" />
+            <h3 className="font-semibold text-lg mb-2">Не вдалося завантажити курси</h3>
+            <p className="text-muted-foreground text-sm mb-6">Перевірте підключення та спробуйте ще раз</p>
+            <Button variant="outline" onClick={() => refetch()}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Спробувати знову
+            </Button>
+          </CardContent>
+        </Card>
       ) : courses?.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
