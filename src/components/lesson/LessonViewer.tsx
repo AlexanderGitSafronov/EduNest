@@ -250,39 +250,47 @@ export function LessonViewer({ lesson, userId, role }: Props) {
           )}
 
           {/* Navigation & Complete */}
-          <div className="mt-8 pt-6 border-t flex items-center justify-between gap-4">
-            <Button variant="outline" disabled={!prevLesson} asChild={!!prevLesson}>
+          <div className="mt-8 pt-6 border-t">
+            {/* Complete button — centered, prominent */}
+            <div className="flex justify-center mb-5">
+              <Button
+                size="lg"
+                variant={completed ? "outline" : "gradient"}
+                onClick={() => markCompleteMutation.mutate(!completed)}
+                disabled={markCompleteMutation.isPending}
+                className={`gap-2 px-8 rounded-full transition-all ${completed ? "border-green-500/50 text-green-500 hover:bg-green-500/5" : ""}`}
+              >
+                {completed ? (
+                  <><CheckCircle2 className="h-5 w-5" /> {t.lesson.completed}</>
+                ) : (
+                  <><Circle className="h-5 w-5" /> {t.lesson.markComplete}</>
+                )}
+              </Button>
+            </div>
+
+            {/* Prev / Next navigation */}
+            <div className="flex items-center justify-between gap-4">
               {prevLesson ? (
-                <Link href={`/lessons/${prevLesson.id}`}>
-                  <ChevronLeft className="mr-1.5 h-4 w-4" /> {t.common.previous}
-                </Link>
+                <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+                  <Link href={`/lessons/${prevLesson.id}`}>
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">{t.common.previous}</span>
+                  </Link>
+                </Button>
               ) : (
-                <span><ChevronLeft className="mr-1.5 h-4 w-4" /> {t.common.previous}</span>
+                <div />
               )}
-            </Button>
 
-            <Button
-              variant={completed ? "outline" : "gradient"}
-              onClick={() => markCompleteMutation.mutate(!completed)}
-              disabled={markCompleteMutation.isPending}
-              className="gap-2"
-            >
-              {completed ? (
-                <><CheckCircle2 className="h-4 w-4 text-green-500" /> {t.lesson.completed}</>
-              ) : (
-                <><Circle className="h-4 w-4" /> {t.lesson.markComplete}</>
-              )}
-            </Button>
-
-            <Button variant="outline" disabled={!nextLesson} asChild={!!nextLesson}>
               {nextLesson ? (
-                <Link href={`/lessons/${nextLesson.id}`}>
-                  {t.common.next} <ChevronRight className="ml-1.5 h-4 w-4" />
-                </Link>
+                <Button variant="gradient" size="sm" asChild className="gap-1.5 rounded-full px-5 ml-auto">
+                  <Link href={`/lessons/${nextLesson.id}`}>
+                    {t.common.next} <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </Button>
               ) : (
-                <span>{t.common.next} <ChevronRight className="ml-1.5 h-4 w-4" /></span>
+                <div />
               )}
-            </Button>
+            </div>
           </div>
         </div>
       </div>
