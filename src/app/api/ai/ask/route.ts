@@ -8,36 +8,42 @@ export async function POST(req: Request) {
   const { question, lessonTitle, lessonContent } = await req.json()
   if (!question?.trim()) return NextResponse.json({ error: "Empty question" }, { status: 400 })
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: "AI assistant not configured" }, { status: 503 })
   }
 
   try {
     const systemPrompt = lessonTitle
-      ? `You are a helpful educational assistant. The student is currently studying "${lessonTitle}".${lessonContent ? ` Lesson content: ${lessonContent.slice(0, 500)}` : ""} Answer concisely in Ukrainian.`
-      : "You are a helpful educational assistant. Answer concisely in Ukrainian."
+      ? `Ти корисний освітній асистент. Студент зараз вивчає тему "${lessonTitle}".${lessonContent ? ` Зміст уроку: ${lessonContent.slice(0, 500)}` : ""} Відповідай стисло та зрозуміло українською мовою.`
+      : "Ти корисний освітній асистент. Відповідай стисло та зрозуміло українською мовою."
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "gpt-4o-mini",
         max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: "user", content: question }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: question },
+        ],
       }),
     })
 
-    if (!response.ok) throw new Error("AI API error")
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      throw new Error(err.error?.message ?? "OpenAI API error")
+    }
+
     const data = await response.json()
-    const answer = data.content?.[0]?.text ?? "Не вдалося отримати відповідь"
+    const answer = data.choices?.[0]?.message?.content ?? "Не вдалося отримати відповідь"
     return NextResponse.json({ answer })
-  } catch {
-    return NextResponse.json({ error: "AI request failed" }, { status: 500 })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "AI request failed"
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
