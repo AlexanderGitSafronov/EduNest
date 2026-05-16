@@ -71,16 +71,24 @@ export function CourseEditor({ course: initial }: { course: Course }) {
 
   const addModule = async () => {
     if (!moduleTitle.trim()) return
-    const res = await fetch("/api/modules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: moduleTitle.trim(), courseId: course.id }),
-    })
-    if (res.ok) {
-      const mod = await res.json()
-      setCourse(c => ({ ...c, modules: [...c.modules, { ...mod, lessons: [] }] }))
-      setModuleTitle("")
-      setAddModuleOpen(false)
+    try {
+      const res = await fetch("/api/modules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: moduleTitle.trim(), courseId: course.id }),
+      })
+      if (res.ok) {
+        const mod = await res.json()
+        setCourse(c => ({ ...c, modules: [...c.modules, { ...mod, lessons: [] }] }))
+        setModuleTitle("")
+        setAddModuleOpen(false)
+        toast.success("Модуль додано!")
+      } else {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error ?? `Помилка ${res.status}`)
+      }
+    } catch {
+      toast.error("Помилка з'єднання")
     }
   }
 
