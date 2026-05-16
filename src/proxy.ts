@@ -1,20 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getToken } from "next-auth/jwt"
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
-  // Auth required routes
   const protectedPaths = ["/dashboard", "/lessons", "/profile", "/notifications"]
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
 
   const secureCookie = process.env.NODE_ENV === "production"
+  const cookieName = secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token"
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie,
-    cookieName: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
-    salt: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
+    cookieName,
+    salt: cookieName,
   })
 
   if (isProtected && !token) {
@@ -23,7 +23,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Redirect logged-in users away from auth pages and landing page
   if (token && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/register") || pathname === "/")) {
     return NextResponse.redirect(new URL("/dashboard", req.url))
   }
