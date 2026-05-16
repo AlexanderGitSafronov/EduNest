@@ -9,13 +9,19 @@ export async function proxy(req: NextRequest) {
 
   const secureCookie = process.env.NODE_ENV === "production"
   const cookieName = secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token"
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-    secureCookie,
-    cookieName,
-    salt: cookieName,
-  })
+
+  let token = null
+  try {
+    token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+      secureCookie,
+      cookieName,
+      salt: cookieName,
+    })
+  } catch {
+    // If token verification fails, treat as unauthenticated
+  }
 
   if (isProtected && !token) {
     const loginUrl = new URL("/auth/login", req.url)
