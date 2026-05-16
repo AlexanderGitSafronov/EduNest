@@ -2,13 +2,16 @@
 
 import { useEffect } from "react"
 import { useSession } from "next-auth/react"
+import { usePathname } from "next/navigation"
 import Cookies from "js-cookie"
 
 export function OnboardingTour() {
   const { data: session } = useSession()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!session?.user) return
+    if (!pathname.startsWith("/dashboard")) return
     const seen = Cookies.get("edunest-tour-done")
     if (seen) return
 
@@ -98,7 +101,7 @@ export function OnboardingTour() {
     return () => {
       driver?.destroy()
     }
-  }, [session])
+  }, [session, pathname])
 
   return null
 }

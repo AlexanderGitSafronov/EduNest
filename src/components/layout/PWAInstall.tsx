@@ -21,6 +21,8 @@ export function PWAInstall() {
       navigator.serviceWorker.register("/sw.js").catch(() => {})
     }
 
+    if (localStorage.getItem("edunest-pwa-dismissed")) return
+
     const handler = (e: Event) => {
       e.preventDefault()
       setPrompt(e as BeforeInstallPromptEvent)
@@ -52,7 +54,7 @@ export function PWAInstall() {
         className="fixed top-20 right-4 z-50 max-w-xs"
       >
         <div className="rounded-2xl border bg-card/95 backdrop-blur-xl shadow-2xl p-4">
-          <button onClick={() => setVisible(false)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
+          <button onClick={() => { localStorage.setItem("edunest-pwa-dismissed", "1"); setVisible(false) }} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
           <div className="flex items-start gap-3 mb-3">
