@@ -70,7 +70,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
   }
 
   const addModule = async () => {
-    if (!moduleTitle.trim()) return
+    if (moduleTitle.trim().length < 2) return
     try {
       const res = await fetch("/api/modules", {
         method: "POST",
@@ -85,7 +85,8 @@ export function CourseEditor({ course: initial }: { course: Course }) {
         toast.success("Модуль додано!")
       } else {
         const err = await res.json().catch(() => ({}))
-        toast.error(err.error ?? `Помилка ${res.status}`)
+        const msg = typeof err.error === "string" ? err.error : `Помилка ${res.status}`
+        toast.error(msg)
       }
     } catch {
       toast.error("Помилка з'єднання")
@@ -304,7 +305,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddModuleOpen(false)}>{t.common.cancel}</Button>
-            <Button type="button" variant="gradient" onClick={addModule} disabled={!moduleTitle.trim()}>Додати</Button>
+            <Button type="button" variant="gradient" onClick={addModule} disabled={moduleTitle.trim().length < 2}>Додати</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
