@@ -11,12 +11,22 @@ export default async function AdminPage() {
     redirect("/admin/login")
   }
 
-  const requests = await prisma.teacherRequest.findMany({
-    include: {
-      user: { select: { id: true, name: true, email: true, image: true, createdAt: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  })
+  const [requests, teachers] = await Promise.all([
+    prisma.teacherRequest.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true, image: true, createdAt: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findMany({
+      where: { role: "TEACHER" },
+      select: {
+        id: true, name: true, email: true, image: true, createdAt: true,
+        _count: { select: { courses: true, enrollments: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+  ])
 
-  return <AdminDashboard requests={requests} />
+  return <AdminDashboard requests={requests} teachers={teachers} />
 }

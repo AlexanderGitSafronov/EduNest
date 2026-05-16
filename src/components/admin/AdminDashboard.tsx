@@ -3,9 +3,9 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
-import { ShieldCheck, LogOut, CheckCircle2, XCircle, Clock, Users, ChevronDown, ChevronUp } from "lucide-react"
+import { ShieldCheck, LogOut, CheckCircle2, XCircle, Clock, Users, ChevronDown, ChevronUp, BookOpen, UserX } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,19 +17,24 @@ interface TeacherRequest {
   status: string
   message: string | null
   createdAt: Date | string
-  user: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-    createdAt: Date | string
-  }
+  user: { id: string; name: string | null; email: string; image: string | null; createdAt: Date | string }
 }
 
-export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
+interface Teacher {
+  id: string
+  name: string | null
+  email: string
+  image: string | null
+  createdAt: Date | string
+  _count: { courses: number; enrollments: number }
+}
+
+export function AdminDashboard({ requests, teachers }: { requests: TeacherRequest[]; teachers: Teacher[] }) {
   const router = useRouter()
   const [list, setList] = useState(requests)
+  const [teacherList, setTeacherList] = useState(teachers)
   const [rejectDialog, setRejectDialog] = useState<{ id: string; name: string } | null>(null)
+  const [revokeDialog, setRevokeDialog] = useState<{ id: string; name: string } | null>(null)
   const [rejectMessage, setRejectMessage] = useState("")
   const [loading, setLoading] = useState<string | null>(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -52,7 +57,6 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
         body: JSON.stringify({ id, action, message }),
       })
       if (!res.ok) throw new Error()
-
       setList((prev) =>
         prev.map((r) =>
           r.id === id
@@ -60,7 +64,6 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
             : r
         )
       )
-
       toast.success(action === "approve" ? "Заявку схвалено" : "Заявку відхилено")
     } catch {
       toast.error("Помилка. Спробуйте ще раз.")
@@ -71,9 +74,29 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
     }
   }
 
+  const handleRevoke = async (userId: string) => {
+    setLoading(userId)
+    try {
+      const res = await fetch("/api/admin/revoke-teacher", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+      if (!res.ok) throw new Error()
+      setTeacherList((prev) => prev.filter((t) => t.id !== userId))
+      toast.success("Доступ викладача відкликано")
+    } catch {
+      toast.error("Помилка. Спробуйте ще раз.")
+    } finally {
+      setLoading(null)
+      setRevokeDialog(null)
+    }
+  }
+
   const statusBadge = (status: string) => {
     if (status === "PENDING") return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" />Очікує</Badge>
     if (status === "APPROVED") return <Badge variant="success" className="gap-1"><CheckCircle2 className="h-3 w-3" />Схвалено</Badge>
+    if (status === "REVOKED") return <Badge variant="destructive" className="gap-1"><UserX className="h-3 w-3" />Відкликано</Badge>
     return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Відхилено</Badge>
   }
 
@@ -92,13 +115,13 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: "Всього заявок", value: list.length, icon: Users, color: "text-blue-500", bg: "bg-blue-500/10" },
+            { label: "Заявок", value: list.length, icon: Clock, color: "text-blue-500", bg: "bg-blue-500/10" },
             { label: "Очікують", value: pending.length, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10" },
-            { label: "Оброблено", value: history.length, icon: CheckCircle2, color: "text-green-500", bg: "bg-green-500/10" },
+            { label: "Викладачів", value: teacherList.length, icon: Users, color: "text-green-500", bg: "bg-green-500/10" },
           ].map((s) => (
             <Card key={s.label} className="border-0 shadow-sm">
               <CardContent className="p-5 flex items-center justify-between">
@@ -114,12 +137,67 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
           ))}
         </div>
 
+        {/* Active teachers */}
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Активні викладачі</h2>
+          {teacherList.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                Немає активних викладачів
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {teacherList.map((teacher, i) => (
+                <motion.div key={teacher.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={teacher.image ?? ""} />
+                            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-sm">
+                              {teacher.name?.[0]?.toUpperCase() ?? "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{teacher.name ?? "Без імені"}</p>
+                            <p className="text-sm text-muted-foreground truncate">{teacher.email}</p>
+                            <div className="flex items-center gap-3 mt-1">
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <BookOpen className="h-3 w-3" /> {teacher._count.courses} курсів
+                              </span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Users className="h-3 w-3" /> {teacher._count.enrollments} студентів
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5 shrink-0"
+                          disabled={loading === teacher.id}
+                          onClick={() => setRevokeDialog({ id: teacher.id, name: teacher.name ?? teacher.email })}
+                        >
+                          <UserX className="h-3.5 w-3.5" /> Відкликати
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Pending requests */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Заявки на розгляді</h2>
           {pending.length === 0 ? (
             <Card className="border-dashed">
-              <CardContent className="py-12 text-center text-muted-foreground">
+              <CardContent className="py-10 text-center text-muted-foreground">
                 <Clock className="h-8 w-8 mx-auto mb-2 opacity-40" />
                 Нових заявок немає
               </CardContent>
@@ -182,7 +260,7 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-3"
             >
               {showHistory ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              Історія ({history.length})
+              Історія заявок ({history.length})
             </button>
             {showHistory && (
               <div className="space-y-2">
@@ -215,9 +293,7 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
       {/* Reject dialog */}
       <Dialog open={!!rejectDialog} onOpenChange={(o) => { if (!o) { setRejectDialog(null); setRejectMessage("") } }}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Відхилити заявку</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Відхилити заявку</DialogTitle></DialogHeader>
           <div className="py-2 space-y-3">
             <p className="text-sm text-muted-foreground">
               Ви відхиляєте заявку від <strong>{rejectDialog?.name}</strong>. Вкажіть причину (необов&apos;язково).
@@ -237,6 +313,28 @@ export function AdminDashboard({ requests }: { requests: TeacherRequest[] }) {
               onClick={() => rejectDialog && handleAction(rejectDialog.id, "reject", rejectMessage || undefined)}
             >
               Відхилити
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revoke dialog */}
+      <Dialog open={!!revokeDialog} onOpenChange={(o) => { if (!o) setRevokeDialog(null) }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader><DialogTitle>Відкликати доступ викладача?</DialogTitle></DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-muted-foreground">
+              <strong>{revokeDialog?.name}</strong> втратить доступ до Studio і більше не зможе створювати курси. Студенти залишаться записаними на вже існуючі курси.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRevokeDialog(null)}>Скасувати</Button>
+            <Button
+              variant="destructive"
+              disabled={!!loading}
+              onClick={() => revokeDialog && handleRevoke(revokeDialog.id)}
+            >
+              <UserX className="mr-2 h-4 w-4" /> Відкликати
             </Button>
           </DialogFooter>
         </DialogContent>
