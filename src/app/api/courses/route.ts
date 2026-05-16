@@ -12,14 +12,17 @@ const courseSchema = z.object({
 
 const NO_CACHE = { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await auth()
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401, ...NO_CACHE })
     }
 
-    if ((session.user as { role?: string }).role === "TEACHER") {
+    const url = new URL(req.url)
+    const viewAsStudent = url.searchParams.get("view") === "student"
+
+    if ((session.user as { role?: string }).role === "TEACHER" && !viewAsStudent) {
       const courses = await prisma.course.findMany({
         where: { teacherId: session.user.id },
         include: {

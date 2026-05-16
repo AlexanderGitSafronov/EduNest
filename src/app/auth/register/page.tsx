@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, Suspense } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { GraduationCap, Mail, Lock, User, Loader2, Eye, EyeOff, BookOpen, Users } from "lucide-react"
+import { GraduationCap, Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -12,7 +12,6 @@ import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
 
@@ -21,7 +20,6 @@ const schema = z.object({
   email: z.string().email("Введіть коректний email"),
   password: z.string().min(6, "Мінімум 6 символів"),
   confirmPassword: z.string(),
-  role: z.enum(["STUDENT", "TEACHER"]),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Паролі не співпадають",
   path: ["confirmPassword"],
@@ -29,25 +27,15 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-const roles = [
-  { value: "STUDENT", labelKey: "asStudent", icon: Users, desc: "Навчатися та переглядати курси" },
-  { value: "TEACHER", labelKey: "asTeacher", icon: BookOpen, desc: "Створювати курси та керувати студентами" },
-]
-
 function RegisterForm() {
   const { t } = useTranslation()
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const defaultRole = searchParams.get("role") === "teacher" ? "TEACHER" : "STUDENT"
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { role: defaultRole },
   })
-
-  const selectedRole = watch("role")
 
   const onSubmit = async (data: FormData) => {
     setLoading(true)
@@ -55,12 +43,13 @@ function RegisterForm() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: data.name, email: data.email, password: data.password, role: data.role }),
+        body: JSON.stringify({ name: data.name, email: data.email, password: data.password }),
       })
 
       if (!res.ok) {
         const err = await res.json()
-        toast.error(err.error || "Помилка реєстрації")
+        const msg = typeof err.error === "string" ? err.error : "Помилка реєстрації"
+        toast.error(msg)
         return
       }
 
@@ -106,32 +95,6 @@ function RegisterForm() {
                 {t.auth.login}
               </Link>
             </p>
-          </div>
-
-          {/* Role selector */}
-          <div className="mb-6">
-            <Label className="text-sm mb-3 block">{t.auth.role}</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {roles.map((role) => {
-                const Icon = role.icon
-                return (
-                  <button
-                    key={role.value}
-                    type="button"
-                    onClick={() => setValue("role", role.value as "STUDENT" | "TEACHER")}
-                    className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
-                      selectedRole === role.value
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-primary/50 hover:bg-muted/50"
-                    )}
-                  >
-                    <Icon className={cn("h-6 w-6", selectedRole === role.value ? "text-primary" : "text-muted-foreground")} />
-                    <span className="text-sm font-medium">{t.auth[role.labelKey as keyof typeof t.auth]}</span>
-                  </button>
-                )
-              })}
-            </div>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

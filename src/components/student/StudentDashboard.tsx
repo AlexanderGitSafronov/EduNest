@@ -1,15 +1,19 @@
 "use client"
 
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { useSession } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { BookOpen, CheckCircle2, TrendingUp, Play, ArrowRight, RefreshCw, AlertCircle } from "lucide-react"
+import { BookOpen, CheckCircle2, TrendingUp, Play, ArrowRight, RefreshCw, AlertCircle, Clapperboard, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useTranslation } from "@/hooks/useTranslation"
+import { useViewModeStore } from "@/lib/store"
+import { toast } from "sonner"
 import Link from "next/link"
 
 interface EnrolledCourse {
@@ -23,7 +27,7 @@ interface EnrolledCourse {
 }
 
 async function fetchEnrolledCourses(): Promise<EnrolledCourse[]> {
-  const res = await fetch("/api/courses", { cache: "no-store" })
+  const res = await fetch("/api/courses?view=student", { cache: "no-store" })
   if (!res.ok) throw new Error(`Failed to fetch courses (${res.status})`)
   return res.json()
 }
@@ -32,6 +36,88 @@ async function fetchProgress(): Promise<Array<{ lessonId: string; completed: boo
   const res = await fetch("/api/progress", { cache: "no-store" })
   if (!res.ok) return []
   return res.json()
+}
+
+function BecomeTeacherCard() {
+  const { data: session, update } = useSession()
+  const { setViewMode } = useViewModeStore()
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  const handleBecomeTeacher = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/user/become-teacher", { method: "POST" })
+      if (!res.ok) throw new Error()
+
+      await update()
+      setViewMode("teacher")
+      setOpen(false)
+      toast.success("Вітаємо! Тепер ви викладач. Створіть свій перший курс!")
+    } catch {
+      toast.error("Не вдалося змінити роль. Спробуйте ще раз.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if ((session?.user as { role?: string })?.role === "TEACHER") return null
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="mt-10">
+        <Card className="border-dashed border-2 border-primary/20 bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
+          <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4 py-6 px-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20">
+                <Clapperboard className="h-6 w-6 text-indigo-500" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Хочете ділитися знаннями?</h3>
+                <p className="text-sm text-muted-foreground">Станьте викладачем і створюйте власні курси</p>
+              </div>
+            </div>
+            <Button variant="gradient" className="shrink-0 rounded-full px-6" onClick={() => setOpen(true)}>
+              Стати викладачем
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Clapperboard className="h-5 w-5 text-primary" />
+              Стати викладачем
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Після підтвердження ви отримаєте доступ до Studio — де можна створювати курси, модулі та уроки.
+            </p>
+            <ul className="text-sm space-y-1.5">
+              {["Створюйте необмежену кількість курсів", "Керуйте студентами", "Переглядайте прогрес учнів"].map((item) => (
+                <li key={item} className="flex items-center gap-2 text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground border-t pt-3">
+              Ви завжди зможете переключитися назад до режиму студента через перемикач у навігаційній панелі.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Скасувати</Button>
+            <Button variant="gradient" onClick={handleBecomeTeacher} disabled={loading}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Оновлення...</> : "Підтвердити"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
 }
 
 export function StudentDashboard() {
@@ -126,7 +212,7 @@ export function StudentDashboard() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {courses?.map((course, i) => {
-            const progress = getCourseProgress(course)
+            const prog = getCourseProgress(course)
             const totalLess = course.modules.reduce((s, m) => s + m.lessons.length, 0)
             const firstLesson = course.modules[0]?.lessons[0]
 
@@ -143,18 +229,18 @@ export function StudentDashboard() {
                     <div>
                       <div className="flex justify-between text-sm mb-1.5">
                         <span className="text-muted-foreground">{t.dashboard.student.progress}</span>
-                        <span className="font-medium">{progress}%</span>
+                        <span className="font-medium">{prog}%</span>
                       </div>
-                      <Progress value={progress} className="h-2" />
+                      <Progress value={prog} className="h-2" />
                       <p className="text-xs text-muted-foreground mt-1">{totalLess} уроків</p>
                     </div>
-                    {progress === 100 ? (
+                    {prog === 100 ? (
                       <Badge variant="success" className="w-full justify-center py-1">✓ Завершено</Badge>
                     ) : (
                       <Button size="sm" variant="gradient" className="w-full group/btn" asChild>
                         <Link href={firstLesson ? `/lessons/${firstLesson.id}` : "#"}>
                           <Play className="mr-2 h-3.5 w-3.5" />
-                          {progress > 0 ? t.dashboard.student.continue : "Почати"}
+                          {prog > 0 ? t.dashboard.student.continue : "Почати"}
                           <ArrowRight className="ml-auto h-3.5 w-3.5 group-hover/btn:translate-x-1 transition-transform" />
                         </Link>
                       </Button>
@@ -166,6 +252,8 @@ export function StudentDashboard() {
           })}
         </div>
       )}
+
+      <BecomeTeacherCard />
     </div>
   )
 }

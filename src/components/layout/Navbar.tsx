@@ -3,7 +3,8 @@
 import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
-import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown } from "lucide-react"
+import { useState, useEffect } from "react"
+import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown, BookOpen, Clapperboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -16,8 +17,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { cn } from "@/lib/utils"
 import { useTranslation } from "@/hooks/useTranslation"
-import { useLocaleStore } from "@/lib/store"
+import { useLocaleStore, useViewModeStore } from "@/lib/store"
 
 const locales = [
   { code: "uk", label: "Українська", flag: "🇺🇦" },
@@ -30,7 +32,14 @@ export function Navbar() {
   const { t } = useTranslation()
   const { theme, setTheme } = useTheme()
   const { locale, setLocale } = useLocaleStore()
+  const { viewMode, setViewMode } = useViewModeStore()
   const currentLocale = locales.find((l) => l.code === locale)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => setMounted(true), [])
+
+  const role = (session?.user as { role?: string })?.role
+  const effectiveView = mounted ? (role === "TEACHER" ? (viewMode ?? "teacher") : "student") : "student"
 
   const { data: notifData } = useQuery({
     queryKey: ["notifications-count"],
@@ -55,7 +64,35 @@ export function Navbar() {
             <span className="text-xl font-bold gradient-text">EduNest</span>
           </Link>
 
-          <div />
+          {/* Mode switcher for teachers */}
+          {mounted && role === "TEACHER" && (
+            <div className="flex items-center bg-muted rounded-xl p-1 gap-0.5">
+              <button
+                onClick={() => setViewMode("student")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
+                  effectiveView === "student"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <BookOpen className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Навчання</span>
+              </button>
+              <button
+                onClick={() => setViewMode("teacher")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
+                  effectiveView === "teacher"
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Clapperboard className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Студія</span>
+              </button>
+            </div>
+          )}
 
           {/* Actions */}
           <div className="flex items-center gap-2">
@@ -135,7 +172,7 @@ export function Navbar() {
                         <p className="font-medium">{session.user?.name}</p>
                         <p className="text-xs text-muted-foreground">{session.user?.email}</p>
                         <Badge variant="secondary" className="w-fit text-xs capitalize mt-1">
-                          {(session.user as { role?: string })?.role?.toLowerCase()}
+                          {role === "TEACHER" ? "Викладач" : "Студент"}
                         </Badge>
                       </div>
                     </DropdownMenuLabel>
