@@ -6,9 +6,10 @@ import { z } from "zod"
 const updateSchema = z.object({
   title: z.string().min(3).max(200).optional(),
   description: z.string().optional(),
-  thumbnail: z.string().optional(),
+  thumbnail: z.string().nullable().optional(),
   published: z.boolean().optional(),
   isPublic: z.boolean().optional(),
+  deadline: z.string().nullable().optional().transform((v) => v ? new Date(v) : null),
 })
 
 export async function GET(

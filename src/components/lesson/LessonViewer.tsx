@@ -1,9 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { CheckCircle2, Circle, ChevronLeft, ChevronRight, FileText, Download, ChevronDown, ChevronUp, BookOpen } from "lucide-react"
+import {
+  CheckCircle2, Circle, ChevronLeft, ChevronRight, FileText, Download,
+  ChevronDown, ChevronUp, BookOpen
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -13,6 +16,12 @@ import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
 import { formatBytes } from "@/lib/utils"
 import { useMutation } from "@tanstack/react-query"
+import { CommentsSection } from "./CommentsSection"
+import { NotesSection } from "./NotesSection"
+import { AIAssistant } from "./AIAssistant"
+import { HomeworkSection } from "./HomeworkSection"
+import { QuizSection } from "./QuizSection"
+import { CertificateSection } from "./CertificateSection"
 
 function VideoPlayer({ url, onEnded }: { url: string; onEnded?: () => void }) {
   const isYouTube = url.includes("youtube.com") || url.includes("youtu.be")
@@ -42,12 +51,7 @@ function VideoPlayer({ url, onEnded }: { url: string; onEnded?: () => void }) {
   }
 
   return (
-    <video
-      src={url}
-      className="w-full h-full"
-      controls
-      onEnded={onEnded}
-    />
+    <video src={url} className="w-full h-full" controls onEnded={onEnded} />
   )
 }
 
@@ -78,13 +82,22 @@ interface Props {
   lesson: Lesson
   userId: string
   role: string
+  userName?: string
 }
 
-export function LessonViewer({ lesson, userId, role }: Props) {
+async function fireConfetti() {
+  const confetti = (await import("canvas-confetti")).default
+  confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } })
+  setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5 }, angle: 60 }), 400)
+  setTimeout(() => confetti({ particleCount: 60, spread: 100, origin: { y: 0.5 }, angle: 120 }), 800)
+}
+
+export function LessonViewer({ lesson, userId, role, userName = "Студент" }: Props) {
   const { t } = useTranslation()
   const [completed, setCompleted] = useState(lesson.progress[0]?.completed ?? false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set([lesson.module.course.modules[0]?.id]))
+  const didFireConfetti = useRef(false)
 
   const course = lesson.module.course
   const allLessons = course.modules.flatMap((m) => m.lessons)
@@ -95,6 +108,16 @@ export function LessonViewer({ lesson, userId, role }: Props) {
   const totalLessons = allLessons.length
   const completedCount = currentIndex + (completed ? 1 : 0)
   const progressPct = Math.round((completedCount / totalLessons) * 100)
+
+  useEffect(() => {
+    if (progressPct === 100 && !didFireConfetti.current) {
+      didFireConfetti.current = true
+      setTimeout(() => {
+        fireConfetti()
+        toast.success("🎉 Курс завершено! Вітаємо!", { duration: 5000 })
+      }, 300)
+    }
+  }, [progressPct])
 
   const markCompleteMutation = useMutation({
     mutationFn: async (isCompleted: boolean) => {
@@ -108,6 +131,17 @@ export function LessonViewer({ lesson, userId, role }: Props) {
     onSuccess: (_, isCompleted) => {
       setCompleted(isCompleted)
       toast.success(isCompleted ? "Урок позначено як завершений ✓" : "Урок відзначено як незавершений")
+      if (isCompleted) {
+        fetch("/api/user/achievements", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ event: "lesson_completed" }),
+        }).then((r) => r.json()).then((d) => {
+          if (d.newAchievements?.length) {
+            d.newAchievements.forEach((title: string) => toast.success(`🏆 Досягнення: ${title}!`, { duration: 5000 }))
+          }
+        }).catch(() => null)
+      }
     },
   })
 
@@ -194,7 +228,10 @@ export function LessonViewer({ lesson, userId, role }: Props) {
               <h1 className="text-2xl font-bold">{lesson.title}</h1>
               {lesson.description && <p className="text-muted-foreground text-sm mt-1">{lesson.description}</p>}
             </div>
-            <Badge variant="outline" className="shrink-0">{lesson.type}</Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              <AIAssistant lessonTitle={lesson.title} lessonContent={lesson.content} />
+              <Badge variant="outline">{lesson.type}</Badge>
+            </div>
           </div>
 
           {/* Video player */}
@@ -251,7 +288,6 @@ export function LessonViewer({ lesson, userId, role }: Props) {
 
           {/* Navigation & Complete */}
           <div className="mt-8 pt-6 border-t">
-            {/* Complete button — centered, prominent */}
             <div className="flex justify-center mb-5">
               <Button
                 size="lg"
@@ -268,7 +304,6 @@ export function LessonViewer({ lesson, userId, role }: Props) {
               </Button>
             </div>
 
-            {/* Prev / Next navigation */}
             <div className="flex items-center justify-between gap-4">
               {prevLesson ? (
                 <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
@@ -277,9 +312,7 @@ export function LessonViewer({ lesson, userId, role }: Props) {
                     <span className="hidden sm:inline">{t.common.previous}</span>
                   </Link>
                 </Button>
-              ) : (
-                <div />
-              )}
+              ) : <div />}
 
               {nextLesson ? (
                 <Button variant="gradient" size="sm" asChild className="gap-1.5 rounded-full px-5 ml-auto">
@@ -287,11 +320,33 @@ export function LessonViewer({ lesson, userId, role }: Props) {
                     {t.common.next} <ChevronRight className="h-4 w-4" />
                   </Link>
                 </Button>
-              ) : (
-                <div />
-              )}
+              ) : <div />}
             </div>
           </div>
+
+          {/* Certificate for last lesson when complete */}
+          {progressPct === 100 && !nextLesson && (
+            <CertificateSection
+              courseId={course.id}
+              courseName={course.title}
+              userName={userName}
+              isComplete
+            />
+          )}
+
+          {/* Quiz for QUIZ-type lessons */}
+          {lesson.type === "QUIZ" && <QuizSection lessonId={lesson.id} />}
+
+          {/* Homework */}
+          <HomeworkSection lessonId={lesson.id} role={role} />
+
+          {/* Notes */}
+          <NotesSection lessonId={lesson.id} />
+
+          {/* Comments */}
+          <CommentsSection lessonId={lesson.id} userId={userId} />
+
+          <div className="h-12" />
         </div>
       </div>
     </div>

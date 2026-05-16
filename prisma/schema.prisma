@@ -31,15 +31,18 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  courses        Course[]         @relation("TeacherCourses")
-  enrollments    Enrollment[]
-  progress       LessonProgress[]
-  notes          Note[]
-  notifications  Notification[]
-  comments       Comment[]
-  teacherRequest TeacherRequest?
+  accounts            Account[]
+  sessions            Session[]
+  courses             Course[]           @relation("TeacherCourses")
+  enrollments         Enrollment[]
+  progress            LessonProgress[]
+  notes               Note[]
+  notifications       Notification[]
+  comments            Comment[]
+  teacherRequest      TeacherRequest?
+  certificates        Certificate[]
+  homeworkSubmissions HomeworkSubmission[]
+  userAchievements    UserAchievement[]
 
   @@map("users")
 }
@@ -96,20 +99,22 @@ model VerificationToken {
 }
 
 model Course {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  description String?  @db.Text
+  description String?   @db.Text
   thumbnail   String?
-  slug        String   @unique
-  published   Boolean  @default(false)
-  isPublic    Boolean  @default(false)
+  slug        String    @unique
+  published   Boolean   @default(false)
+  isPublic    Boolean   @default(false)
+  deadline    DateTime?
   teacherId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  teacher     User         @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: Cascade)
-  modules     Module[]
-  enrollments Enrollment[]
+  teacher      User          @relation("TeacherCourses", fields: [teacherId], references: [id], onDelete: Cascade)
+  modules      Module[]
+  enrollments  Enrollment[]
+  certificates Certificate[]
 
   @@map("courses")
 }
@@ -143,11 +148,13 @@ model Lesson {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  attachments Attachment[]
-  progress    LessonProgress[]
-  notes       Note[]
-  comments    Comment[]
+  module        Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attachments   Attachment[]
+  progress      LessonProgress[]
+  notes         Note[]
+  comments      Comment[]
+  homework      Homework?
+  quizQuestions QuizQuestion[]
 
   @@map("lessons")
 }
@@ -240,4 +247,97 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Certificate {
+  id       String   @id @default(cuid())
+  userId   String
+  courseId String
+  issuedAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("certificates")
+}
+
+model Homework {
+  id          String   @id @default(cuid())
+  lessonId    String   @unique
+  title       String
+  description String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lesson      Lesson               @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  submissions HomeworkSubmission[]
+
+  @@map("homework")
+}
+
+model HomeworkSubmission {
+  id         String   @id @default(cuid())
+  homeworkId String
+  userId     String
+  content    String   @db.Text
+  grade      Int?
+  feedback   String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  homework Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([homeworkId, userId])
+  @@map("homework_submissions")
+}
+
+model Achievement {
+  id          String @id @default(cuid())
+  key         String @unique
+  title       String
+  description String
+  icon        String
+
+  userAchievements UserAchievement[]
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@map("user_achievements")
+}
+
+model QuizQuestion {
+  id       String @id @default(cuid())
+  lessonId String
+  question String @db.Text
+  position Int    @default(0)
+
+  lesson  Lesson       @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  options QuizOption[]
+
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  position   Int     @default(0)
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_options")
 }

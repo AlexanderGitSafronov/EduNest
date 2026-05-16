@@ -23,7 +23,7 @@ interface Lesson { id: string; title: string; type: string; published: boolean; 
 interface Module { id: string; title: string; lessons: Lesson[] }
 interface Enrollment { user: { id: string; name: string; email: string; image?: string } }
 interface Course {
-  id: string; title: string; description?: string; thumbnail?: string; published: boolean; isPublic: boolean
+  id: string; title: string; description?: string; thumbnail?: string; published: boolean; isPublic: boolean; deadline?: string
   modules: Module[]
   enrollments: Enrollment[]
 }
@@ -31,7 +31,13 @@ interface Course {
 export function CourseEditor({ course: initial }: { course: Course }) {
   const { t } = useTranslation()
   const [course, setCourse] = useState(initial)
-  const [form, setForm] = useState({ title: course.title, description: course.description ?? "", isPublic: course.isPublic })
+  const [form, setForm] = useState({
+    title: course.title,
+    description: course.description ?? "",
+    isPublic: course.isPublic,
+    thumbnail: course.thumbnail ?? "",
+    deadline: course.deadline ? new Date(course.deadline).toISOString().slice(0, 10) : "",
+  })
   const [addLessonOpen, setAddLessonOpen] = useState(false)
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [lessonForm, setLessonForm] = useState<{ title: string; videoUrl: string; type: "TEXT" | "VIDEO" | "MIXED" }>({ title: "", videoUrl: "", type: "TEXT" })
@@ -47,7 +53,13 @@ export function CourseEditor({ course: initial }: { course: Course }) {
       const res = await fetch(`/api/courses/${course.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, description: form.description, isPublic: form.isPublic }),
+        body: JSON.stringify({
+          title: form.title,
+          description: form.description,
+          isPublic: form.isPublic,
+          thumbnail: form.thumbnail || null,
+          deadline: form.deadline || null,
+        }),
       })
       if (!res.ok) throw new Error()
       toast.success("Збережено!")
@@ -248,6 +260,30 @@ export function CourseEditor({ course: initial }: { course: Course }) {
               <div className="space-y-2">
                 <Label>{t.course.description}</Label>
                 <Textarea rows={4} value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label>Обкладинка курсу (URL зображення)</Label>
+                <Input
+                  placeholder="https://example.com/image.jpg"
+                  value={form.thumbnail}
+                  onChange={(e) => setForm(f => ({ ...f, thumbnail: e.target.value }))}
+                />
+                {form.thumbnail && (
+                  <div className="relative h-32 rounded-xl overflow-hidden bg-muted">
+                    <img src={form.thumbnail} alt="thumbnail" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Дедлайн курсу (необов'язково)</Label>
+                <Input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) => setForm(f => ({ ...f, deadline: e.target.value }))}
+                />
+                {form.deadline && (
+                  <p className="text-xs text-muted-foreground">Студенти побачать попередження за 3 дні до дедлайну</p>
+                )}
               </div>
               <div className="rounded-xl border p-4 space-y-3">
                 <h3 className="text-sm font-semibold">Видимість курсу</h3>

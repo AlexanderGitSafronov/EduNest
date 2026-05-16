@@ -50,7 +50,7 @@ export default async function LessonPage({ params }: { params: Promise<{ lessonI
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-1">
-        <LessonViewer lesson={lesson as any} userId={sessionUser.id!} role={sessionUser.role as string} />
+        <LessonViewer lesson={lesson as any} userId={sessionUser.id!} role={sessionUser.role as string} userName={session.user.name ?? undefined} />
       </main>
     </div>
   )
