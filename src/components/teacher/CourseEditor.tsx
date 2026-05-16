@@ -304,7 +304,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddModuleOpen(false)}>{t.common.cancel}</Button>
-            <Button variant="gradient" onClick={addModule} disabled={!moduleTitle.trim()}>Додати</Button>
+            <Button type="button" variant="gradient" onClick={addModule} disabled={!moduleTitle.trim()}>Додати</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -316,7 +316,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           <p className="text-sm text-muted-foreground py-2">Студент втратить доступ до курсу. Цю дію можна скасувати, додавши студента повторно.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteStudentId(null)}>{t.common.cancel}</Button>
-            <Button variant="destructive" onClick={() => { if (deleteStudentId) removeStudent(deleteStudentId); setDeleteStudentId(null) }}>Видалити</Button>
+            <Button type="button" variant="destructive" onClick={() => { if (deleteStudentId) removeStudent(deleteStudentId); setDeleteStudentId(null) }}>Видалити</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -349,7 +349,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddLessonOpen(false)}>{t.common.cancel}</Button>
-            <Button variant="gradient" onClick={addLesson} disabled={!lessonForm.title}>{t.lesson.create}</Button>
+            <Button type="button" variant="gradient" onClick={addLesson} disabled={!lessonForm.title}>{t.lesson.create}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

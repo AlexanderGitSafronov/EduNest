@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { motion } from "framer-motion"
@@ -34,7 +34,7 @@ const roles = [
   { value: "TEACHER", labelKey: "asTeacher", icon: BookOpen, desc: "Створювати курси та керувати студентами" },
 ]
 
-export default function RegisterPage() {
+function RegisterForm() {
   const { t } = useTranslation()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -190,5 +190,13 @@ export default function RegisterPage() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   )
 }
