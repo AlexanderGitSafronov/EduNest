@@ -26,7 +26,19 @@ export async function POST(
         where: { userId_courseId: { userId, courseId } },
       })
       if (existing) return NextResponse.json({ error: "Already enrolled" }, { status: 409 })
-      const enrollment = await prisma.enrollment.create({ data: { userId, courseId } })
+
+      const [enrollment] = await prisma.$transaction([
+        prisma.enrollment.create({ data: { userId, courseId } }),
+        prisma.notification.create({
+          data: {
+            userId: course.teacherId,
+            title: "Новий студент",
+            message: `${session.user.name ?? session.user.email} записався на курс «${course.title}»`,
+            type: "info",
+            link: `/dashboard/courses/${courseId}`,
+          },
+        }),
+      ])
       return NextResponse.json(enrollment, { status: 201 })
     }
 

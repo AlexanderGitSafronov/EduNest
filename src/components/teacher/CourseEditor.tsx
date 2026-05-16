@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
+import { StudentProgressTab } from "./StudentProgressTab"
 
 interface Lesson { id: string; title: string; type: string; published: boolean; videoUrl?: string }
 interface Module { id: string; title: string; lessons: Lesson[] }
@@ -165,6 +166,7 @@ export function CourseEditor({ course: initial }: { course: Course }) {
           <TabsTrigger value="students">
             Студенти <Badge variant="secondary" className="ml-1.5">{course.enrollments.length}</Badge>
           </TabsTrigger>
+          <TabsTrigger value="progress">Прогрес</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
@@ -313,6 +315,10 @@ export function CourseEditor({ course: initial }: { course: Course }) {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="progress">
+          <StudentProgressTab courseId={course.id} />
         </TabsContent>
       </Tabs>
 
