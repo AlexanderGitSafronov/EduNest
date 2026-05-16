@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSession, signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown, BookOpen, Clapperboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ export function Navbar() {
   const { theme, setTheme } = useTheme()
   const { locale, setLocale } = useLocaleStore()
   const { viewMode, setViewMode } = useViewModeStore()
+  const router = useRouter()
   const currentLocale = locales.find((l) => l.code === locale)
   const [mounted, setMounted] = useState(false)
 
@@ -68,7 +70,7 @@ export function Navbar() {
           {mounted && role === "TEACHER" && (
             <div className="flex items-center bg-muted rounded-xl p-1 gap-0.5">
               <button
-                onClick={() => setViewMode("student")}
+                onClick={() => { setViewMode("student"); router.push("/dashboard") }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
                   effectiveView === "student"
@@ -80,7 +82,7 @@ export function Navbar() {
                 <span className="hidden sm:inline">Навчання</span>
               </button>
               <button
-                onClick={() => setViewMode("teacher")}
+                onClick={() => { setViewMode("teacher"); router.push("/dashboard") }}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
                   effectiveView === "teacher"
