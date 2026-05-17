@@ -37,19 +37,26 @@ async function fetchCourses(): Promise<Course[]> {
   return res.json()
 }
 
+async function parseError(res: Response, fallback: string): Promise<string> {
+  try {
+    const e = await res.json()
+    return typeof e.error === "string" ? e.error : fallback
+  } catch { return fallback }
+}
+
 async function createCourse(data: { title: string; description: string }): Promise<Course> {
   const res = await fetch("/api/courses", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   })
-  if (!res.ok) throw new Error("Failed to create course")
+  if (!res.ok) throw new Error(await parseError(res, "Не вдалося створити курс"))
   return res.json()
 }
 
 async function deleteCourse(id: string) {
   const res = await fetch(`/api/courses/${id}`, { method: "DELETE" })
-  if (!res.ok) throw new Error("Failed to delete course")
+  if (!res.ok) throw new Error(await parseError(res, "Не вдалося видалити курс"))
 }
 
 async function togglePublish(id: string, published: boolean) {
@@ -58,7 +65,7 @@ async function togglePublish(id: string, published: boolean) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ published }),
   })
-  if (!res.ok) throw new Error("Failed to update course")
+  if (!res.ok) throw new Error(await parseError(res, "Не вдалося оновити курс"))
   return res.json()
 }
 
@@ -83,7 +90,7 @@ export function TeacherDashboard() {
       setForm({ title: "", description: "" })
       toast.success("Курс створено!")
     },
-    onError: () => toast.error("Помилка при створенні курсу"),
+    onError: (err: Error) => toast.error(err.message || "Помилка при створенні курсу"),
   })
 
   const deleteMutation = useMutation({
@@ -92,12 +99,13 @@ export function TeacherDashboard() {
       queryClient.invalidateQueries({ queryKey: ["courses"] })
       toast.success("Курс видалено")
     },
-    onError: () => toast.error("Помилка при видаленні"),
+    onError: (err: Error) => toast.error(err.message || "Помилка при видаленні"),
   })
 
   const publishMutation = useMutation({
     mutationFn: ({ id, published }: { id: string; published: boolean }) => togglePublish(id, published),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+    onError: (err: Error) => toast.error(err.message || "Помилка при оновленні"),
   })
 
   const enrollMutation = useMutation({
@@ -139,12 +147,13 @@ export function TeacherDashboard() {
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">{t.dashboard.teacher.title}</h1>
-          <p className="text-muted-foreground mt-1">
-            {t.dashboard.welcome}, {session?.user?.name?.split(" ")[0]}! 👋
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {t.dashboard.welcome},{" "}
+            <span className="gradient-text">{session?.user?.name?.split(" ")[0] ?? "👋"}</span>
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm">{t.dashboard.teacher.title} • Керуйте курсами та студентами</p>
         </div>
-        <Button variant="gradient" onClick={() => setCreateOpen(true)} id="create-course-btn">
+        <Button variant="gradient" onClick={() => setCreateOpen(true)} id="create-course-btn" className="shadow-lg shadow-indigo-500/20">
           <Plus className="mr-2 h-4 w-4" />
           {t.course.create}
         </Button>
@@ -155,15 +164,22 @@ export function TeacherDashboard() {
         {stats.map((stat, i) => {
           const Icon = stat.icon
           return (
-            <motion.div key={i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-              <Card className="border-0 shadow-sm">
-                <CardContent className="p-5">
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08 }}
+              whileHover={{ y: -3 }}
+            >
+              <Card className="relative overflow-hidden border bg-gradient-to-br from-card to-muted/30 shadow-sm hover:shadow-lg hover:shadow-black/5 transition-shadow duration-300 group">
+                <div className={`absolute top-0 right-0 w-32 h-32 ${stat.bg} blur-2xl opacity-50 group-hover:opacity-80 transition-opacity -translate-y-12 translate-x-12`} />
+                <CardContent className="p-5 relative">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
-                      <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{stat.label}</p>
+                      <p className="text-3xl font-bold mt-2 tabular-nums">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-xl ${stat.bg}`}>
+                    <div className={`p-3 rounded-xl ${stat.bg} ring-1 ring-current/10 group-hover:scale-110 transition-transform`}>
                       <Icon className={`h-6 w-6 ${stat.color}`} />
                     </div>
                   </div>

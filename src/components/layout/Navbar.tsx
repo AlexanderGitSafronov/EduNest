@@ -5,6 +5,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useQuery } from "@tanstack/react-query"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import { GraduationCap, Bell, Sun, Moon, Monitor, Globe, ChevronDown, BookOpen, Clapperboard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -68,31 +69,32 @@ export function Navbar() {
 
           {/* Mode switcher for teachers */}
           {mounted && role === "TEACHER" && (
-            <div className="flex items-center bg-muted rounded-xl p-1 gap-0.5">
-              <button
-                onClick={() => { setViewMode("student"); router.push("/dashboard") }}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
-                  effectiveView === "student"
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <BookOpen className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Навчання</span>
-              </button>
-              <button
-                onClick={() => { setViewMode("teacher"); router.push("/dashboard") }}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200",
-                  effectiveView === "teacher"
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Clapperboard className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Студія</span>
-              </button>
+            <div className="relative flex items-center bg-muted/70 rounded-xl p-1 gap-0.5 border border-border/40">
+              {(["student", "teacher"] as const).map((mode) => {
+                const isActive = effectiveView === mode
+                const Icon = mode === "student" ? BookOpen : Clapperboard
+                const label = mode === "student" ? "Навчання" : "Студія"
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => { setViewMode(mode); router.push("/dashboard") }}
+                    className={cn(
+                      "relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors duration-200 z-10",
+                      isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="modeSwitcherBg"
+                        className="absolute inset-0 bg-background rounded-lg shadow-sm shadow-indigo-500/10 ring-1 ring-indigo-500/15"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <Icon className={cn("h-3.5 w-3.5 relative z-10", isActive && "text-indigo-500")} />
+                    <span className="hidden sm:inline relative z-10">{label}</span>
+                  </button>
+                )
+              })}
             </div>
           )}
 

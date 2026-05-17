@@ -13,6 +13,15 @@ export async function POST(
 
     const { completed, watchedSecs } = await req.json()
 
+    const existing = await prisma.lessonProgress.findUnique({
+      where: { userId_lessonId: { userId: session.user.id, lessonId } },
+      select: { watchedSecs: true },
+    })
+
+    const newWatched = watchedSecs !== undefined
+      ? Math.max(existing?.watchedSecs ?? 0, watchedSecs)
+      : undefined
+
     const progress = await prisma.lessonProgress.upsert({
       where: { userId_lessonId: { userId: session.user.id, lessonId } },
       create: {
@@ -23,12 +32,13 @@ export async function POST(
       },
       update: {
         completed: completed ?? undefined,
-        watchedSecs: watchedSecs ?? undefined,
+        watchedSecs: newWatched,
       },
     })
 
     return NextResponse.json(progress)
-  } catch {
+  } catch (error) {
+    console.error("POST /api/lessons/[lessonId]/progress error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

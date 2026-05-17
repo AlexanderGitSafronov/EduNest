@@ -254,9 +254,9 @@ model Notification {
 
 model Certificate {
   id       String   @id @default(cuid())
-  userId   String
-  courseId String
-  issuedAt DateTime @default(now())
+  userId   String   @map("user_id")
+  courseId String   @map("course_id")
+  issuedAt DateTime @default(now()) @map("issued_at")
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -267,11 +267,11 @@ model Certificate {
 
 model Homework {
   id          String   @id @default(cuid())
-  lessonId    String   @unique
+  lessonId    String   @unique @map("lesson_id")
   title       String
   description String   @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   lesson      Lesson               @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   submissions HomeworkSubmission[]
@@ -281,13 +281,13 @@ model Homework {
 
 model HomeworkSubmission {
   id         String   @id @default(cuid())
-  homeworkId String
-  userId     String
+  homeworkId String   @map("homework_id")
+  userId     String   @map("user_id")
   content    String   @db.Text
   grade      Int?
   feedback   String?  @db.Text
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   homework Homework @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -310,9 +310,9 @@ model Achievement {
 
 model UserAchievement {
   id            String   @id @default(cuid())
-  userId        String
-  achievementId String
-  earnedAt      DateTime @default(now())
+  userId        String   @map("user_id")
+  achievementId String   @map("achievement_id")
+  earnedAt      DateTime @default(now()) @map("earned_at")
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   achievement Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
@@ -323,7 +323,7 @@ model UserAchievement {
 
 model QuizQuestion {
   id       String @id @default(cuid())
-  lessonId String
+  lessonId String @map("lesson_id")
   question String @db.Text
   position Int    @default(0)
 
@@ -335,9 +335,9 @@ model QuizQuestion {
 
 model QuizOption {
   id         String  @id @default(cuid())
-  questionId String
+  questionId String  @map("question_id")
   text       String
-  isCorrect  Boolean @default(false)
+  isCorrect  Boolean @default(false) @map("is_correct")
   position   Int     @default(0)
 
   question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)

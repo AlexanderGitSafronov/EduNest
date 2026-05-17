@@ -7,7 +7,7 @@ export async function GET(
 ) {
   const { courseId } = await params
   try {
-    const course = await prisma.course.findUnique({
+    const course = await prisma.course.findFirst({
       where: { id: courseId, published: true, isPublic: true },
       include: {
         teacher: { select: { id: true, name: true, image: true, bio: true } },

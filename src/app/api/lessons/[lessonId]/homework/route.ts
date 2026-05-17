@@ -33,24 +33,38 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ lessonId: string }> }
 ) {
-  const { lessonId } = await params
-  const session = await auth()
-  if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    const { lessonId } = await params
+    const session = await auth()
+    if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const teacherId = (session.user as { id?: string }).id!
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      include: { module: { include: { course: { select: { teacherId: true } } } } },
+    })
+    if (!lesson || lesson.module.course.teacherId !== teacherId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    const { title, description } = await req.json()
+    if (!title?.trim() || !description?.trim()) {
+      return NextResponse.json({ error: "Title and description required" }, { status: 400 })
+    }
+
+    const hw = await prisma.homework.upsert({
+      where: { lessonId },
+      create: { id: `hw_${lessonId}`.slice(0, 36), lessonId, title: title.trim(), description: description.trim() },
+      update: { title: title.trim(), description: description.trim() },
+    })
+
+    return NextResponse.json(hw)
+  } catch (error) {
+    console.error("PUT /api/lessons/[lessonId]/homework error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-
-  const { title, description } = await req.json()
-  if (!title?.trim() || !description?.trim()) {
-    return NextResponse.json({ error: "Title and description required" }, { status: 400 })
-  }
-
-  const hw = await prisma.homework.upsert({
-    where: { lessonId },
-    create: { id: `hw_${lessonId}`.slice(0, 36), lessonId, title: title.trim(), description: description.trim() },
-    update: { title: title.trim(), description: description.trim() },
-  })
-
-  return NextResponse.json(hw)
 }
 
 // Student submits homework
@@ -82,17 +96,31 @@ export async function PATCH(
   req: Request,
   _ctx: { params: Promise<{ lessonId: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  try {
+    const session = await auth()
+    if (!session?.user || (session.user as { role?: string }).role !== "TEACHER") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const teacherId = (session.user as { id?: string }).id!
+    const { submissionId, grade, feedback } = await req.json()
+
+    const sub = await prisma.homeworkSubmission.findUnique({
+      where: { id: submissionId },
+      include: { homework: { include: { lesson: { include: { module: { include: { course: { select: { teacherId: true } } } } } } } } },
+    })
+    if (!sub || sub.homework.lesson.module.course.teacherId !== teacherId) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
+
+    const submission = await prisma.homeworkSubmission.update({
+      where: { id: submissionId },
+      data: { grade, feedback },
+    })
+
+    return NextResponse.json(submission)
+  } catch (error) {
+    console.error("PATCH /api/lessons/[lessonId]/homework error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
-
-  const { submissionId, grade, feedback } = await req.json()
-
-  const submission = await prisma.homeworkSubmission.update({
-    where: { id: submissionId },
-    data: { grade, feedback },
-  })
-
-  return NextResponse.json(submission)
 }
