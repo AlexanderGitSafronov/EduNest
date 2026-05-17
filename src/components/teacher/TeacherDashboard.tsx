@@ -232,56 +232,73 @@ export function TeacherDashboard() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses?.map((course, i) => (
-              <motion.div key={course.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -2 }}>
-                <Card className="group hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
-                  <div className="h-2 rounded-t-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg leading-snug truncate">{course.title}</CardTitle>
-                        <CardDescription className="mt-1 line-clamp-2">
-                          {course.description || "Опис відсутній"}
-                        </CardDescription>
+              <motion.div key={course.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }}>
+                <Card className="group relative overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 border-border/60">
+                  {/* Header with thumbnail or gradient */}
+                  <div className="relative h-32 overflow-hidden">
+                    {course.thumbnail ? (
+                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 relative">
+                        <div
+                          className="absolute inset-0 opacity-25"
+                          style={{
+                            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+                            backgroundSize: "20px 20px",
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <BookOpen className="h-10 w-10 text-white/80" />
+                        </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/courses/${course.id}`}>
-                              <Edit2 className="mr-2 h-4 w-4" /> {t.course.edit}
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => publishMutation.mutate({ id: course.id, published: !course.published })}>
-                            {course.published ? <><EyeOff className="mr-2 h-4 w-4" /> {t.course.unpublish}</> : <><Eye className="mr-2 h-4 w-4" /> {t.course.publish}</>}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => { setSelectedCourse(course); setEnrollOpen(true) }}>
-                            <UserPlus className="mr-2 h-4 w-4" /> {t.course.giveAccess}
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={() => setDeleteCourseId(course.id)}>
-                            <Trash2 className="mr-2 h-4 w-4" /> {t.course.delete}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {course._count.enrollments} студентів</span>
-                      <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {course._count.modules} модулів</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Badge variant={course.published ? "success" : "secondary"}>
+                    )}
+                    <div className="absolute top-3 left-3">
+                      <Badge className={course.published ? "bg-green-500/90 text-white border-0 backdrop-blur shadow-md" : "bg-black/40 text-white border-0 backdrop-blur shadow-md"}>
                         {course.published ? t.course.published : t.course.draft}
                       </Badge>
-                      <Button size="sm" variant="outline" asChild>
-                        <Link href={`/dashboard/courses/${course.id}`}>{t.course.edit}</Link>
-                      </Button>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-8 w-8 bg-black/30 hover:bg-black/50 text-white backdrop-blur opacity-0 group-hover:opacity-100 transition-opacity">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/courses/${course.id}`}>
+                            <Edit2 className="mr-2 h-4 w-4" /> {t.course.edit}
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => publishMutation.mutate({ id: course.id, published: !course.published })}>
+                          {course.published ? <><EyeOff className="mr-2 h-4 w-4" /> {t.course.unpublish}</> : <><Eye className="mr-2 h-4 w-4" /> {t.course.publish}</>}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { setSelectedCourse(course); setEnrollOpen(true) }}>
+                          <UserPlus className="mr-2 h-4 w-4" /> {t.course.giveAccess}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeleteCourseId(course.id)}>
+                          <Trash2 className="mr-2 h-4 w-4" /> {t.course.delete}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base leading-snug line-clamp-1">{course.title}</CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2 text-xs">
+                      {course.description || "Опис відсутній"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                      <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> {course._count.enrollments}</span>
+                      <span className="flex items-center gap-1.5"><BookOpen className="h-3.5 w-3.5" /> {course._count.modules} модулів</span>
+                    </div>
+                    <Button size="sm" variant="outline" className="w-full rounded-xl" asChild>
+                      <Link href={`/dashboard/courses/${course.id}`}>
+                        <Edit2 className="mr-2 h-3.5 w-3.5" />
+                        {t.course.edit}
+                      </Link>
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>

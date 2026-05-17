@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, Plus, Save, Trash2, GripVertical, Video, FileText, ChevronDown, ChevronUp, Users, UserMinus } from "lucide-react"
+import { ChevronLeft, Plus, Save, Trash2, Video, FileText, ChevronDown, ChevronUp, Users, UserMinus, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -230,7 +230,9 @@ export function CourseEditor({ course: initial }: { course: Course }) {
                 <CardHeader className="py-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500/15 to-purple-500/15 border border-indigo-500/20">
+                        <Layers className="h-3.5 w-3.5 text-indigo-500" />
+                      </div>
                       <CardTitle className="text-base">{mod.title}</CardTitle>
                       <Badge variant="secondary" className="text-xs">{mod.lessons.length} уроків</Badge>
                     </div>

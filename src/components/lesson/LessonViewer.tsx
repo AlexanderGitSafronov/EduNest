@@ -16,6 +16,7 @@ import { toast } from "sonner"
 import { useTranslation } from "@/hooks/useTranslation"
 import { formatBytes } from "@/lib/utils"
 import { useMutation } from "@tanstack/react-query"
+import DOMPurify from "isomorphic-dompurify"
 import { CommentsSection } from "./CommentsSection"
 import { NotesSection } from "./NotesSection"
 import { AIAssistant } from "./AIAssistant"
@@ -177,36 +178,54 @@ export function LessonViewer({ lesson, userId, role, userName = "Студент"
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2">
-              {course.modules.map((mod) => (
-                <div key={mod.id} className="mb-2">
+              {course.modules.map((mod, modIdx) => (
+                <div key={mod.id} className="mb-1">
                   <button
                     onClick={() => toggleModule(mod.id)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-muted text-sm font-medium text-left"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg hover:bg-muted/60 text-sm font-medium text-left transition-colors group"
                   >
-                    <span className="truncate">{mod.title}</span>
-                    {expandedModules.has(mod.id) ? <ChevronUp className="h-4 w-4 flex-shrink-0" /> : <ChevronDown className="h-4 w-4 flex-shrink-0" />}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-md bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/15 text-[10px] font-bold text-indigo-500 flex items-center justify-center">
+                        {modIdx + 1}
+                      </span>
+                      <span className="truncate text-xs">{mod.title}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{mod.lessons.length}</span>
+                      {expandedModules.has(mod.id) ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </div>
                   </button>
                   {expandedModules.has(mod.id) && (
-                    <div className="ml-2 mt-1 space-y-0.5">
-                      {mod.lessons.map((l) => (
-                        <Link
-                          key={l.id}
-                          href={`/lessons/${l.id}`}
-                          className={cn(
-                            "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                            l.id === lesson.id ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                          )}
-                        >
-                          {l.id === lesson.id ? (
-                            <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                            </div>
-                          ) : (
-                            <Circle className="h-4 w-4 flex-shrink-0" />
-                          )}
-                          <span className="truncate">{l.title}</span>
-                        </Link>
-                      ))}
+                    <div className="ml-2 mt-1 mb-2 space-y-0.5 border-l border-border/40 pl-2">
+                      {mod.lessons.map((l) => {
+                        const isActive = l.id === lesson.id
+                        return (
+                          <Link
+                            key={l.id}
+                            href={`/lessons/${l.id}`}
+                            className={cn(
+                              "relative flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors",
+                              isActive ? "bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 font-medium" : "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="activeLessonBar"
+                                className="absolute -left-2 top-1/2 -translate-y-1/2 w-1 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500"
+                                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                              />
+                            )}
+                            {isActive ? (
+                              <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                <div className="w-1 h-1 rounded-full bg-white" />
+                              </div>
+                            ) : (
+                              <Circle className="h-3.5 w-3.5 flex-shrink-0 opacity-50" />
+                            )}
+                            <span className="truncate">{l.title}</span>
+                          </Link>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
@@ -251,7 +270,11 @@ export function LessonViewer({ lesson, userId, role, userName = "Студент"
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="mt-6 prose-lesson"
-              dangerouslySetInnerHTML={{ __html: lesson.content.replace(/<script[\s\S]*?<\/script>/gi, "").replace(/on\w+="[^"]*"/g, "") }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(lesson.content, {
+                ALLOWED_TAGS: ["h1", "h2", "h3", "h4", "p", "br", "ul", "ol", "li", "strong", "em", "a", "code", "pre", "blockquote", "img", "hr"],
+                ALLOWED_ATTR: ["href", "target", "rel", "src", "alt", "title"],
+                ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):)/i,
+              }) }}
             />
           )}
 

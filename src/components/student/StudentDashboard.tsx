@@ -298,43 +298,69 @@ export function StudentDashboard() {
             const firstLesson = course.modules[0]?.lessons[0]
 
             return (
-              <motion.div key={course.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -2 }}>
-                <Card className="group hover:shadow-lg transition-all duration-300">
-                  {course.thumbnail ? (
-                    <div className="h-32 rounded-t-xl overflow-hidden">
-                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+              <motion.div key={course.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }}>
+                <Card className="group relative overflow-hidden hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 border-border/60">
+                  {/* Thumbnail / gradient header */}
+                  <div className="relative h-36 overflow-hidden">
+                    {course.thumbnail ? (
+                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 relative">
+                        <div
+                          className="absolute inset-0 opacity-25"
+                          style={{
+                            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+                            backgroundSize: "20px 20px",
+                          }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <BookOpen className="h-12 w-12 text-white/80" />
+                        </div>
+                      </div>
+                    )}
+                    {/* Progress chip overlay */}
+                    <div className="absolute top-3 right-3">
+                      {prog === 100 ? (
+                        <Badge variant="success" className="bg-green-500/90 text-white border-0 backdrop-blur shadow-md">✓ Завершено</Badge>
+                      ) : (
+                        <Badge className="bg-black/40 text-white border-0 backdrop-blur shadow-md">{prog}%</Badge>
+                      )}
                     </div>
-                  ) : (
-                    <div className="h-2 rounded-t-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-                  )}
-                  <CardHeader className="pb-3">
                     {course.deadline && (() => {
                       const daysLeft = Math.ceil((new Date(course.deadline).getTime() - Date.now()) / 86400000)
                       if (daysLeft > 0 && daysLeft <= 7) return (
-                        <div className={`flex items-center gap-1.5 text-xs mb-1 ${daysLeft <= 3 ? "text-red-500" : "text-orange-500"}`}>
-                          <CalendarClock className="h-3.5 w-3.5" />
-                          Дедлайн: {daysLeft === 1 ? "завтра" : `через ${daysLeft} дн.`}
+                        <div className={`absolute top-3 left-3 flex items-center gap-1.5 text-xs px-2 py-1 rounded-full backdrop-blur ${daysLeft <= 3 ? "bg-red-500/90 text-white" : "bg-orange-500/90 text-white"} shadow-md`}>
+                          <CalendarClock className="h-3 w-3" />
+                          {daysLeft === 1 ? "завтра" : `${daysLeft} дн.`}
                         </div>
                       )
                       return null
                     })()}
-                    <CardTitle className="text-lg leading-snug">{course.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">{course.description || "Опис відсутній"}</CardDescription>
-                    <p className="text-xs text-muted-foreground">Викладач: {course.teacher.name}</p>
+                  </div>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base leading-snug line-clamp-2">{course.title}</CardTitle>
+                    <CardDescription className="line-clamp-2 text-xs">{course.description || "Опис відсутній"}</CardDescription>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[10px] text-white font-bold">
+                        {course.teacher.name?.[0]?.toUpperCase()}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">{course.teacher.name}</p>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <div className="flex justify-between text-sm mb-1.5">
-                        <span className="text-muted-foreground">{t.dashboard.student.progress}</span>
-                        <span className="font-medium">{prog}%</span>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-muted-foreground">{totalLess} уроків</span>
+                        <span className="font-medium tabular-nums">{prog}%</span>
                       </div>
-                      <Progress value={prog} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">{totalLess} уроків</p>
+                      <Progress value={prog} className="h-1.5" />
                     </div>
                     {prog === 100 ? (
-                      <Badge variant="success" className="w-full justify-center py-1">✓ Завершено</Badge>
+                      <Button size="sm" variant="outline" className="w-full rounded-xl" asChild>
+                        <Link href={firstLesson ? `/lessons/${firstLesson.id}` : "#"}>Переглянути</Link>
+                      </Button>
                     ) : (
-                      <Button size="sm" variant="gradient" className="w-full group/btn" asChild>
+                      <Button size="sm" variant="gradient" className="w-full group/btn rounded-xl shadow-md shadow-indigo-500/20" asChild>
                         <Link href={firstLesson ? `/lessons/${firstLesson.id}` : "#"}>
                           <Play className="mr-2 h-3.5 w-3.5" />
                           {prog > 0 ? t.dashboard.student.continue : "Почати"}
